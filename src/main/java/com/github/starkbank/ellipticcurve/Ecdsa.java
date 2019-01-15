@@ -4,10 +4,9 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Random;
 
-import static com.github.starkbank.ellipticcurve.Math.add;
-import static com.github.starkbank.ellipticcurve.Math.inv;
-import static com.github.starkbank.ellipticcurve.Math.multiply;
+import static com.github.starkbank.ellipticcurve.Math.*;
 
 /**
  * Created on 05-Jan-19
@@ -16,20 +15,18 @@ import static com.github.starkbank.ellipticcurve.Math.multiply;
  */
 public final class Ecdsa {
     private Ecdsa() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException("Ecdsa is a utility class and cannot be instantiated");
     }
 
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
         String hashMessage = new String(hashfunc.digest(message.getBytes()));
-        BigInteger numberMessage = new BigInteger(hashMessage);
+        BigInteger numberMessage = numberFrom(hashMessage);
         Curve curve = privateKey.curve;
-        SecureRandom random = new SecureRandom();
-        byte bytes[] = curve.n.subtract(BigInteger.ONE).toByteArray();
-        random.nextBytes(bytes);
-        BigInteger randNum = new BigInteger(bytes).add(BigInteger.ONE);
-        Point randomSignPoint = multiply(new Point(curve.gX, curve.gY), randNum, curve.n, curve.p, curve.a);
-        BigInteger r = randomSignPoint.x.remainder(curve.n);
-        BigInteger s = ((numberMessage.add(r.multiply(privateKey.secret))).multiply(inv(randNum, curve.n))).remainder(curve.n);
+        Random random = new SecureRandom();
+        BigInteger randNum = new BigInteger(curve.n.toByteArray().length * 8 - 1, random);
+        Point randomSignPoint = multiply(new Point(curve.gX, curve.gY), randNum, curve.n, curve.a, curve.p);
+        BigInteger r = randomSignPoint.x.mod(curve.n);
+        BigInteger s = ((numberMessage.add(r.multiply(privateKey.secret))).multiply(inv(randNum, curve.n))).mod(curve.n);
         return new Signature(r, s);
     }
 
@@ -43,15 +40,15 @@ public final class Ecdsa {
 
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
         String hashMessage = new String(hashfunc.digest(message.getBytes()));
-        BigInteger numberMessage = new BigInteger(hashMessage);
+        BigInteger numberMessage = numberFrom(hashMessage);
         Curve curve = publicKey.curve;
         BigInteger Xpk = publicKey.x;
         BigInteger Ypk = publicKey.y;
         BigInteger r = signature.r;
         BigInteger s = signature.s;
         BigInteger w = inv(s, curve.n);
-        Point u1 = multiply(new Point(curve.gX, curve.gY), numberMessage.multiply(w).remainder(curve.n), curve.n, curve.p, curve.a);
-        Point u2 = multiply(new Point(Xpk, Ypk), r .multiply(w).remainder(curve.n), curve.n, curve.p, curve.a);
+        Point u1 = multiply(new Point(curve.gX, curve.gY), numberMessage.multiply(w).mod(curve.n), curve.n, curve.a, curve.p);
+        Point u2 = multiply(new Point(Xpk, Ypk), r.multiply(w).mod(curve.n), curve.n, curve.a, curve.p);
         Point point = add(u1, u2, curve.a, curve.p);
         return r.compareTo(point.x) == 0;
     }

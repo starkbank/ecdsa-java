@@ -2,6 +2,9 @@ package com.github.starkbank.ellipticcurve;
 
 import java.math.BigInteger;
 
+import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.BinAscii.unhexlify;
+
 /**
  * Created on 05-Jan-19
  *
@@ -23,7 +26,7 @@ public final class Math {
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
      * @return Point that represents the sum of First and Second Point
      */
-    public static Point multiply(Point a, BigInteger n, BigInteger N, BigInteger P, BigInteger A) {
+    public static Point multiply(Point a, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
         return fromJacobian(jacobianMultiply(toJacobian(a), n, N, A, P), P);
     }
 
@@ -54,7 +57,7 @@ public final class Math {
         BigInteger lm = BigInteger.ONE;
         BigInteger hm = BigInteger.ZERO;
         BigInteger high = n;
-        BigInteger low = a.remainder(n);
+        BigInteger low = a.mod(n);
         BigInteger r, nm, nw;
         while (low.compareTo(BigInteger.ONE) > 0) {
             r = high.divide(low);
@@ -65,7 +68,7 @@ public final class Math {
             low = nw;
             lm = nm;
         }
-        return lm.remainder(n);
+        return lm.mod(n);
     }
 
     /**
@@ -87,8 +90,8 @@ public final class Math {
      */
     public static Point fromJacobian(Point p, BigInteger P) {
         BigInteger z = inv(p.z, P);
-        BigInteger x = p.x.multiply(z.pow(2).remainder(P));
-        BigInteger y = p.y.multiply(z.pow(3).remainder(P));
+        BigInteger x = p.x.multiply(z.pow(2)).mod(P);
+        BigInteger y = p.y.multiply(z.pow(3)).mod(P);
         return new Point(x, y, BigInteger.ZERO);
     }
 
@@ -101,15 +104,15 @@ public final class Math {
      * @return the result point doubled in elliptic curves
      */
     public static Point jacobianDouble(Point p, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
+        if (p.y == null || p.y.compareTo(BigInteger.ZERO) == 0) {
             return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
         }
-        BigInteger ysq = p.y.pow(2).remainder(P);
-        BigInteger S = BigInteger.valueOf(4).multiply(p.x).multiply(ysq).remainder(P);
-        BigInteger M = BigInteger.valueOf(3).multiply(p.x.pow(2)).add(A.multiply(p.z.pow(4))).remainder(P);
-        BigInteger nx = M.pow(2).subtract(BigInteger.TWO.multiply(S)).remainder(P);
-        BigInteger ny = M.multiply(S.subtract(nx)).subtract(BigInteger.valueOf(8).multiply(ysq.pow(2))).remainder(P);
-        BigInteger nz = BigInteger.TWO.multiply(p.y).multiply(p.z).remainder(P);
+        BigInteger ysq = p.y.pow(2).mod(P);
+        BigInteger S = BigInteger.valueOf(4).multiply(p.x).multiply(ysq).mod(P);
+        BigInteger M = BigInteger.valueOf(3).multiply(p.x.pow(2)).add(A.multiply(p.z.pow(4))).mod(P);
+        BigInteger nx = M.pow(2).subtract(BigInteger.valueOf(2).multiply(S)).mod(P);
+        BigInteger ny = M.multiply(S.subtract(nx)).subtract(BigInteger.valueOf(8).multiply(ysq.pow(2))).mod(P);
+        BigInteger nz = BigInteger.valueOf(2).multiply(p.y).multiply(p.z).mod(P);
         return new Point(nx, ny, nz);
     }
 
@@ -123,30 +126,30 @@ public final class Math {
      * @return Point that represents the sum of First and Second Point
      */
     public static Point jacobianAdd(Point p, Point q, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
+        if (p.y == null || p.y.compareTo(BigInteger.ZERO) == 0) {
             return q;
         }
-        if (q.y == null || q.y.equals(BigInteger.ZERO)) {
+        if (q.y == null || q.y.compareTo(BigInteger.ZERO) == 0) {
             return p;
         }
-        BigInteger U1 = p.x.multiply(q.z.pow(2)).remainder(P);
-        BigInteger U2 = q.x.multiply(p.z.pow(2)).remainder(P);
-        BigInteger S1 = p.y.multiply(q.z.pow(3)).remainder(P);
-        BigInteger S2 = q.y.multiply(p.z.pow(3)).remainder(P);
-        if (U1.equals(U2)) {
-            if (!S1.equals(S2)) {
+        BigInteger U1 = p.x.multiply(q.z.pow(2)).mod(P);
+        BigInteger U2 = q.x.multiply(p.z.pow(2)).mod(P);
+        BigInteger S1 = p.y.multiply(q.z.pow(3)).mod(P);
+        BigInteger S2 = q.y.multiply(p.z.pow(3)).mod(P);
+        if (U1.compareTo(U2) == 0) {
+            if (S1.compareTo(S2) != 0) {
                 return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
             }
             return jacobianDouble(p, A, P);
         }
         BigInteger H = U2.subtract(U1);
         BigInteger R = S2.subtract(S1);
-        BigInteger H2 = H.multiply(H).remainder(P);
-        BigInteger H3 = H.multiply(H2).remainder(P);
-        BigInteger U1H2 = U1.multiply(H2).remainder(P);
-        BigInteger nx = R.pow(2).subtract(H3).subtract(BigInteger.TWO.multiply(U1H2)).remainder(P);
-        BigInteger ny = R.multiply(U1H2.subtract(nx)).subtract(S1.multiply(H3)).remainder(P);
-        BigInteger nz = H.multiply(p.z).multiply(q.z).remainder(P);
+        BigInteger H2 = H.multiply(H).mod(P);
+        BigInteger H3 = H.multiply(H2).mod(P);
+        BigInteger U1H2 = U1.multiply(H2).mod(P);
+        BigInteger nx = R.pow(2).subtract(H3).subtract(BigInteger.valueOf(2).multiply(U1H2)).mod(P);
+        BigInteger ny = R.multiply(U1H2.subtract(nx)).subtract(S1.multiply(H3)).mod(P);
+        BigInteger nz = H.multiply(p.z).multiply(q.z).mod(P);
         return new Point(nx, ny, nz);
     }
 
@@ -161,20 +164,20 @@ public final class Math {
      * @return Point that represents the product of First Point and scalar
      */
     public static Point jacobianMultiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
-        if (BigInteger.ZERO.equals(p.y) || BigInteger.ZERO.equals(n)) {
+        if (BigInteger.ZERO.compareTo(p.y) == 0 || BigInteger.ZERO.compareTo(n) == 0) {
             return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
         }
-        if (BigInteger.ONE.equals(n)) {
+        if (BigInteger.ONE.compareTo(n) == 0) {
             return p;
         }
         if (n.compareTo(BigInteger.ZERO) < 0 || n.compareTo(N) >= 0) {
-            return jacobianMultiply(p, n.remainder(N), N, A, P);
+            return jacobianMultiply(p, n.mod(N), N, A, P);
         }
-        if (n.remainder(BigInteger.TWO).equals(BigInteger.ZERO)) {
-            return jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.TWO), N, A, P), A, P);
+        if (n.mod(BigInteger.valueOf(2)).compareTo(BigInteger.ZERO) == 0) {
+            return jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.valueOf(2)), N, A, P), A, P);
         }
-        if (n.remainder(BigInteger.TWO).equals(BigInteger.ONE)) {
-            return jacobianAdd(jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.TWO), N, A, P), A, P), p, A, P);
+        if (n.mod(BigInteger.valueOf(2)).compareTo(BigInteger.ONE) == 0) {
+            return jacobianAdd(jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.valueOf(2)), N, A, P), A, P), p, A, P);
         }
         return null;
     }
@@ -186,17 +189,7 @@ public final class Math {
      * @return Number in hex from string
      */
     public static BigInteger numberFrom(String string) {
-        byte[] bytes = string.getBytes();
-        StringBuilder hexString = new StringBuilder();
-
-        for (byte aByte : bytes) {
-            String hex = Integer.toHexString(0xFF & aByte);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return new BigInteger(hexString.toString(), 16);
+        return new BigInteger(hexlify(string), 16);
     }
 
     /**
@@ -209,12 +202,6 @@ public final class Math {
     public static String stringFrom(BigInteger number, int length) {
         String fmtStr = "%0" + String.valueOf(2 * length) + "x";
         String hexString = String.format(fmtStr, number);
-
-        byte[] bytes = new byte[hexString.length() * 2];
-
-        for (int i = 0, j = 0; i < hexString.length(); i += 2, j++) {
-            bytes[j] = Byte.valueOf(hexString.substring(i, i + 2), 16);
-        }
-        return new String(bytes);
+        return unhexlify(hexString);
     }
 }

@@ -21,37 +21,37 @@ public class Signature {
         this.s = s;
     }
 
-    public String toDer() {
-        return encodeSequence(encodeInteger(r.longValue()), encodeInteger(s.longValue()));
+    public ByteString toDer() {
+        return encodeSequence(encodeInteger(r), encodeInteger(s));
     }
 
     public String toBase64() {
         return Base64.encodeBytes(toDer().getBytes());
     }
 
-    public static Signature fromDer(String string) {
-        String[] str = removeSequence(string);
-        String rs = str[0];
-        String empty = str[1];
-        if (!empty.equals("")) {
+    public static Signature fromDer(ByteString string) {
+        ByteString[] str = removeSequence(string);
+        ByteString rs = str[0];
+        ByteString empty = str[1];
+        if (!empty.isEmpty()) {
             throw new RuntimeException(String.format("trailing junk after DER sig: %s", hexlify(empty)));
         }
         Object[] o = removeInteger(rs);
-        long r = Long.valueOf(o[0].toString());
-        String rest = (String) o[1];
+        BigInteger r = new BigInteger(o[0].toString());
+        ByteString rest = (ByteString) o[1];
         o = removeInteger(rest);
-        long s = Long.valueOf(o[0].toString());
-        empty = (String) o[1];
-        if (!empty.equals("")) {
+        BigInteger s = new BigInteger(o[0].toString());
+        empty = (ByteString) o[1];
+        if (!empty.isEmpty()) {
             throw new RuntimeException(String.format("trailing junk after DER numbers: %s", hexlify(empty)));
         }
-        return new Signature(BigInteger.valueOf(r), BigInteger.valueOf(s));
+        return new Signature(r, s);
     }
 
-    public static Signature fromBase64(String string) {
-        String der = null;
+    public static Signature fromBase64(ByteString string) {
+        ByteString der = null;
         try {
-            der = new String(Base64.decode(string.getBytes()), "US-ASCII");
+            der = new ByteString(Base64.decode(string.getBytes()));
         } catch (IOException e) {
             throw new IllegalArgumentException("Corrupted base64 string! Could not decode base64 from it");
         }

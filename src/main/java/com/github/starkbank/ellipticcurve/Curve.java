@@ -13,8 +13,44 @@ import java.util.*;
 
 @SuppressWarnings("unchecked")
 public class Curve {
-    private static final long[] OID = {1, 3, 132, 0, 10};
 
+    public static class OID {
+        private long[] oid;
+
+        public OID(long[] oid) {
+            this.oid = oid;
+        }
+
+        public long[] getOid() {
+            return oid;
+        }
+
+        public void setOid(long[] oid) {
+            this.oid = oid;
+        }
+
+        @Override
+        public String toString() {
+            return "OID{" +
+                    "oid=" + Arrays.toString(oid) +
+                    '}';
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof OID)) return false;
+
+            OID oid1 = (OID) o;
+
+            return Arrays.equals(oid, oid1.oid);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(oid);
+        }
+    }
 
     public static final Curve secp256k1 = new Curve(
             BigInteger.ZERO,
@@ -24,7 +60,7 @@ public class Curve {
             new BigInteger("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16),
             new BigInteger("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16),
             "secp256k1",
-            OID
+            new OID(new long[]{1, 3, 132, 0, 10})
     );
 
     //List<Curve>
@@ -49,9 +85,9 @@ public class Curve {
     public BigInteger gX;
     public BigInteger gY;
     public String name;
-    public long[] oid;
+    public OID oid;
 
-    public Curve(BigInteger a, BigInteger b, BigInteger p, BigInteger n, BigInteger gX, BigInteger gY, String name, long[] oid) {
+    public Curve(BigInteger a, BigInteger b, BigInteger p, BigInteger n, BigInteger gX, BigInteger gY, String name, OID oid) {
         this.a = a;
         this.b = b;
         this.p = p;
@@ -74,14 +110,14 @@ public class Curve {
     }
 
     public int length() {
-        return (1 + n.toString().length()) / 2;
+        return (1 + n.toString(16).length()) / 2;
     }
 
     @Override
     public String toString() {
         return "Curve{" +
                 "name='" + name + '\'' +
-                ", oid=" + Arrays.toString(oid) +
+                ", oid=" + oid.toString() +
                 '}';
     }
 }

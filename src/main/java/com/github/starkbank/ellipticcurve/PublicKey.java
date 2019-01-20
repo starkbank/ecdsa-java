@@ -28,21 +28,24 @@ public class PublicKey {
         this.curve = curve;
     }
 
-    @Override
-    public String toString() {
-        return toString(false);
+    public ByteString toByteString() {
+        return toByteString(false);
     }
 
-    public String toString(boolean encoded) {
-        String Xstr = stringFrom(x, curve.length());
-        String Ystr = stringFrom(y, curve.length());
-        return encoded ? (char) 0x00 + (char) 0x04 + Xstr + Ystr : Xstr + Ystr;
+    public ByteString toByteString(boolean encoded) {
+        ByteString xStr = stringFrom(x, curve.length());
+        ByteString yStr = stringFrom(y, curve.length());
+        xStr.insert(yStr.getBytes());
+        if(encoded) {
+            xStr.insert(0, new byte[]{0, 4} );
+        }
+        return xStr;
     }
 
-    public String toDer() {
+    public ByteString toDer() {
         long[] oidEcPublicKey = new long[]{1, 2, 840, 10045, 2, 1};
-        String encodeEcAndOid = encodeSequence(encodeOid(oidEcPublicKey), encodeOid(curve.oid));
-        return encodeSequence(encodeEcAndOid, encodeBitString(toString(true)));
+        ByteString encodeEcAndOid = encodeSequence(encodeOid(oidEcPublicKey), encodeOid(curve.oid.getOid()));
+        return encodeSequence(encodeEcAndOid, encodeBitString(this.toByteString(true)));
     }
 
     public String toPem() {
@@ -53,25 +56,25 @@ public class PublicKey {
         return PublicKey.fromDer(Der.fromPem(string));
     }
 
-    public static PublicKey fromDer(String string) {
-        String[] str = removeSequence(string);
-        String s1 = str[0];
-        String empty = str[1];
-        if (!"".equals(empty)) {
+    public static PublicKey fromDer(ByteString string) {
+        ByteString[] str = removeSequence(string);
+        ByteString s1 = str[0];
+        ByteString empty = str[1];
+        if (!empty.isEmpty()) {
             throw new RuntimeException (String.format("trailing junk after DER pubkey: %s", hexlify(empty)));
         }
         str = removeSequence(s1);
-        String s2 = str[0];
-        String pointStrBitstring = str[1];
+        ByteString s2 = str[0];
+        ByteString pointStrBitstring = str[1];
         Object[] o = removeObject(s2);
-        String rest = (String) o[1];
+        ByteString rest = (ByteString) o[1];
         o = removeObject(rest);
         long[] oidCurve = (long[]) o[0];
-        empty = (String) o[1];
-        if (!"".equals(empty)) {
+        empty = (ByteString) o[1];
+        if (!empty.isEmpty()) {
             throw new RuntimeException (String.format("trailing junk after DER pubkey objects: %s", hexlify(empty)));
         }
-        Curve curve = (Curve) Curve.curvesByOid.get(oidCurve);
+        Curve curve = (Curve) Curve.curvesByOid.get(new Curve.OID(oidCurve));
         if (curve == null) {
             throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s",
                     Arrays.toString(oidCurve), Arrays.toString(supportedCurves.toArray())));
@@ -79,23 +82,23 @@ public class PublicKey {
         }
 
         str = removeBitString(pointStrBitstring);
-        String pointStr = str[0];
+        ByteString pointStr = str[0];
         empty = str[1];
-        if (!"".equals(empty)) {
+        if (!empty.isEmpty()) {
             throw new RuntimeException (String.format("trailing junk after pubkey pointstring: %s", hexlify(empty)));
         }
-        return fromString(pointStr.substring(2),curve);
+        return PublicKey.fromString(pointStr.substring(2), curve);
 
     }
 
-    public static PublicKey fromString(String string, Curve curve, boolean validatePoint) {
+    public static PublicKey fromString(ByteString string, Curve curve, boolean validatePoint) {
         int baselen = curve.length();
 
-        String xs = string.substring(0, baselen);
-        String ys = string.substring(baselen);
+        ByteString xs = string.substring(0, baselen);
+        ByteString ys = string.substring(baselen);
 
-        BigInteger x = numberFrom(xs);
-        BigInteger y = numberFrom(ys);
+        BigInteger x = numberFrom(xs.getBytes());
+        BigInteger y = numberFrom(ys.getBytes());
 
 
         if (validatePoint && !curve.contains(x, y)) {
@@ -106,16 +109,16 @@ public class PublicKey {
 
     }
 
-    public static PublicKey fromString(String string, Curve curve) {
+    public static PublicKey fromString(ByteString string, Curve curve) {
         return fromString(string, curve, true);
     }
 
-    public static PublicKey fromString(String string, boolean validatePoint) {
+    public static PublicKey fromString(ByteString string, boolean validatePoint) {
 //        Curve curve = new Curve();
         return fromString(string, null, validatePoint);
     }
 
-    public static PublicKey fromString(String string) {
+    public static PublicKey fromString(ByteString string) {
         return fromString(string, true);
     }
 }

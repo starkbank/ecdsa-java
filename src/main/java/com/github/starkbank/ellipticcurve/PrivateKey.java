@@ -37,17 +37,16 @@ public class PrivateKey {
         return new PublicKey(publicKey.x, publicKey.y, curve);
     }
 
-    @Override
-    public String toString() {
+    public ByteString toByteString() {
         return stringFrom(this.secret, this.curve.length());
     }
 
-    public String toDer() {
-        String encodedPublicKey = this.publicKey().toString(true);
+    public ByteString toDer() {
+        ByteString encodedPublicKey = this.publicKey().toByteString(true);
         return encodeSequence(
-                encodeInteger(1),
-                encodeOctetString(this.toString()),
-                encodeConstructed(0, encodeOid(this.curve.oid)),
+                encodeInteger(BigInteger.valueOf(1)),
+                encodeOctetString(this.toByteString()),
+                encodeConstructed(0, encodeOid(this.curve.oid.getOid())),
                 encodeConstructed(1, encodeBitString(encodedPublicKey)));
     }
 
@@ -62,61 +61,73 @@ public class PrivateKey {
     }
 
     public static PrivateKey fromDer(String string) {
-        String[] str = removeSequence(string);
-        String s = str[0];
-        String empty = str[1];
-        if (!"".equals(empty)) {
+        return fromDer(new ByteString(string.getBytes()));
+    }
+
+    public static PrivateKey fromDer(ByteString string) {
+        ByteString[] str = removeSequence(string);
+        ByteString s = str[0];
+        ByteString empty = str[1];
+        if (!empty.isEmpty()) {
             throw new RuntimeException(String.format("trailing junk after DER privkey: %s", hexlify(empty)));
         }
 
         Object[] o = removeInteger(s);
         long one = Long.valueOf(o[0].toString());
-        s = (String) o[1];
+        s = (ByteString) o[1];
         if (one != 1) {
             throw new RuntimeException(String.format("expected '1' at start of DER privkey, got %d", one));
         }
 
         str = removeOctetString(s);
-        String privkeyStr = str[0];
+        ByteString privkeyStr = str[0];
         s = str[1];
         Object[] t = removeConstructed(s);
         long tag = Long.valueOf(t[0].toString());
-        String curveOidStr = (String) t[1];
-        s = (String) t[2];
+        ByteString curveOidStr = (ByteString) t[1];
+        s = (ByteString) t[2];
         if (tag != 0) {
             throw new RuntimeException(String.format("expected tag 0 in DER privkey, got %d", tag));
         }
 
         o = removeObject(curveOidStr);
         long[] oidCurve = (long[]) o[0];
-        empty = (String) o[1];
-        if (!"".equals(empty)) {
+        empty = (ByteString) o[1];
+        if (!"".equals(empty.toString())) {
             throw new RuntimeException(String.format("trailing junk after DER privkey curve_oid: %s", hexlify(empty)));
         }
 
-        Curve curve = (Curve) Curve.curvesByOid.get(oidCurve);
+        Curve curve = (Curve) Curve.curvesByOid.get(new Curve.OID(oidCurve));
         if (curve == null) {
             throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s",
                     Arrays.toString(oidCurve), Arrays.toString(supportedCurves.toArray())));
 
         }
 
+
         if (privkeyStr.length() < curve.length()) {
-            StringBuilder builder = new StringBuilder();
+            int l = curve.length() - privkeyStr.length();
+            byte[] bytes = new byte[l + privkeyStr.length()];
             for (int i = 0; i < curve.length() - privkeyStr.length(); i++) {
-                builder.append((char) 0);
+                bytes[i] = 0;
             }
-            privkeyStr = builder.append(privkeyStr).toString();
+            byte[] privateKey = privkeyStr.getBytes();
+            System.arraycopy(privateKey, 0, bytes, l, bytes.length - l);
+            privkeyStr = new ByteString(bytes);
         }
 
         return PrivateKey.fromString(privkeyStr, curve);
     }
 
-    public static PrivateKey fromString(String string, Curve curve) {
-        return new PrivateKey(curve, numberFrom(string));
+    public static PrivateKey fromString(ByteString string, Curve curve) {
+        return new PrivateKey(curve, numberFrom(string.getBytes()));
     }
 
     public static PrivateKey fromString(String string) {
+        return fromString(new ByteString(string.getBytes()));
+    }
+
+    public static PrivateKey fromString(ByteString string) {
         return PrivateKey.fromString(string, Curve.secp256k1);
     }
 }

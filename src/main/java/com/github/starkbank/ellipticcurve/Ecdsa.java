@@ -19,7 +19,7 @@ public final class Ecdsa {
     }
 
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
-        String hashMessage = new String(hashfunc.digest(message.getBytes()));
+        byte[] hashMessage = hashfunc.digest(message.getBytes());
         BigInteger numberMessage = numberFrom(hashMessage);
         Curve curve = privateKey.curve;
         Random random = new SecureRandom();
@@ -39,7 +39,7 @@ public final class Ecdsa {
     }
 
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
-        String hashMessage = new String(hashfunc.digest(message.getBytes()));
+        byte[] hashMessage = hashfunc.digest(message.getBytes());
         BigInteger numberMessage = numberFrom(hashMessage);
         Curve curve = publicKey.curve;
         BigInteger Xpk = publicKey.x;

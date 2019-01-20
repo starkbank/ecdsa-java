@@ -188,7 +188,7 @@ public final class Math {
      * @param string String to be converted in a number
      * @return Number in hex from string
      */
-    public static BigInteger numberFrom(String string) {
+    public static BigInteger numberFrom(byte[] string) {
         return new BigInteger(hexlify(string), 16);
     }
 
@@ -199,9 +199,9 @@ public final class Math {
      * @param length length max number of character for the string
      * @return hexadecimal string
      */
-    public static String stringFrom(BigInteger number, int length) {
+    public static ByteString stringFrom(BigInteger number, int length) {
         String fmtStr = "%0" + String.valueOf(2 * length) + "x";
         String hexString = String.format(fmtStr, number);
-        return unhexlify(hexString);
+        return new ByteString(unhexlify(hexString));
     }
 }

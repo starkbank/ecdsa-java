@@ -64,8 +64,8 @@ jar {
         instruction 'Export-Package', '*'
     }
 }
-
-apply from: 'deploy.gradle'
+//Uncomment after setting up maven central account
+//apply from: 'deploy.gradle'
 
 test {
     testLogging {

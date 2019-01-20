@@ -51,7 +51,7 @@ public class Signature {
     public static Signature fromBase64(String string) {
         String der = null;
         try {
-            der = new String(Base64.decode(string.getBytes()));
+            der = new String(Base64.decode(string.getBytes()), "US-ASCII");
         } catch (IOException e) {
             throw new IllegalArgumentException("Corrupted base64 string! Could not decode base64 from it");
         }

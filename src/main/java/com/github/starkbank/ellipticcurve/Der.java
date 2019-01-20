@@ -44,7 +44,7 @@ public class Der {
             h = "0" + h;
         }
         String s = unhexlify(h);
-        char num = s.charAt(0);
+        byte num = getCharAsByte(s);
         if (num <= 0x7F) {
             return (char) (0x02) + (char) (s.length()) + s;
         }
@@ -96,8 +96,8 @@ public class Der {
     }
 
     public static long[] readLength(String string) {
-        char num = string.charAt(0);
-        if ((num & 0x80) != 0) {
+        byte num = getCharAsByte(string);
+        if ((num & 0x80) == 0) {
             return new long[]{num & 0x7f, 1};
         }
 
@@ -116,7 +116,7 @@ public class Der {
                 throw new RuntimeException("ran out of length bytes");
             }
             number = number << 7;
-            char d = string.charAt(llen);
+            byte d = getCharAsByte(string, llen);
             number += (d & 0x7f);
             llen += 1;
             if ((d & 0x80) != 0)
@@ -126,9 +126,9 @@ public class Der {
     }
 
     public static String[] removeSequence(String string) {
-        if (string.charAt(0) != 0x30) {
-            char n = string.charAt(0);
-            throw new RuntimeException(String.format("wanted sequence (0x30), got 0x%02x", (long) n));
+        byte n = getCharAsByte(string);
+        if (n != 0x30) {
+            throw new RuntimeException(String.format("wanted sequence (0x30), got 0x%02x", n));
         }
         long[] l = readLength(string.substring(1));
         long endseq = 1 + l[0] + l[1];
@@ -136,24 +136,24 @@ public class Der {
     }
 
     public static Object[] removeInteger(String string) {
-        if (string.charAt(0) != 0x02) {
-            char n = string.charAt(0);
-            throw new RuntimeException(String.format("wanted integer (0x02), got 0x%02x", (long) n));
+        byte n = getCharAsByte(string);
+        if (n != 0x02) {
+            throw new RuntimeException(String.format("wanted integer (0x02), got 0x%02x",  n));
         }
         long[] l = readLength(string.substring(1));
         int length = (int) l[0];
         int llen = (int) l[1];
         String numberbytes = string.substring(1 + llen, 1 + llen + length);
         String rest = string.substring(1 + llen + length);
-        char nbytes = numberbytes.charAt(0);
+        byte nbytes = getCharAsByte(numberbytes);
         assert nbytes < 0x80;
         return new Object[]{Long.valueOf(hexlify(numberbytes), 16), rest};
     }
 
     public static Object[] removeObject(String string) {
-        if (string.charAt(0) != 0x06) {
-            char n = string.charAt(0);
-            throw new RuntimeException(String.format("wanted object (0x06), got 0x%02x", (long) n));
+        int n = getCharAsByte(string);
+        if (n != 0x06) {
+            throw new RuntimeException(String.format("wanted object (0x06), got 0x%02x", n));
         }
         long[] l = readLength(string.substring(1));
         int length = (int) l[0];
@@ -163,7 +163,7 @@ public class Der {
         List numbers = new ArrayList();
         while (!body.isEmpty()) {
             l = readNumber(body);
-            int n = (int) l[0];
+            n = (int) l[0];
             int ll = (int) l[1];
             numbers.add(n);
             body = body.substring(ll);
@@ -178,9 +178,9 @@ public class Der {
     }
 
     public static String[] removeBitString(String string) {
-        if (string.charAt(0) != 0x03) {
-            char n = string.charAt(0);
-            throw new RuntimeException(String.format("wanted bitstring (0x03), got 0x%02x", (long) n));
+        byte n = getCharAsByte(string);
+        if (n != 0x03) {
+            throw new RuntimeException(String.format("wanted bitstring (0x03), got 0x%02x", n));
         }
         long[] l = readLength(string.substring(1));
         int length = (int) l[0];
@@ -191,9 +191,9 @@ public class Der {
     }
 
     public static String[] removeOctetString(String string) {
-        if (string.charAt(0) != 0x04) {
-            char n = string.charAt(0);
-            throw new RuntimeException(String.format("wanted octetstring (0x04), got 0x%02x", (long) n));
+        byte n = getCharAsByte(string);
+        if (n != 0x04) {
+            throw new RuntimeException(String.format("wanted octetstring (0x04), got 0x%02x", n));
         }
         long[] l = readLength(string.substring(1));
         int length = (int) l[0];
@@ -204,9 +204,9 @@ public class Der {
     }
 
     public static Object[] removeConstructed(String string) {
-        char s0 = string.charAt(0);
+        byte s0 = getCharAsByte(string);
         if ((s0 & 0xe0) != 0xa0) {
-            throw new RuntimeException(String.format("wanted constructed tag (0xa0-0xbf), got 0x%02x", (long) s0));
+            throw new RuntimeException(String.format("wanted constructed tag (0xa0-0xbf), got 0x%02x", s0));
         }
         long tag = s0 & 0x1f;
         long[] l = readLength(string.substring(1));
@@ -226,7 +226,7 @@ public class Der {
             }
         }
         try {
-            return new String(Base64.decode(d.toString().getBytes()));
+            return new String(Base64.decode(d.toString().getBytes()), "US-ASCII");
         } catch (IOException e) {
             throw new IllegalArgumentException("Corrupted pem string! Could not decode base64 from it");
         }

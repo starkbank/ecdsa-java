@@ -5,11 +5,11 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import static com.github.starkbank.ellipticcurve.Utils.readFileAsBytes;
 import static com.github.starkbank.ellipticcurve.Utils.readFileAsString;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Company: SFL LLC
  * Created on 17-Jan-19
  *
  * @author Taron Petrosyan
@@ -38,7 +38,7 @@ public class OpenSSLTest {
 //        openssl ec -in privateKey.pem - pubout - out publicKey.pem
         String publicKeyPem = readFileAsString("publicKey.pem");
 //        openssl dgst -sha256 -sign privateKey.pem -out signature.binary message.txt
-        String signatureBin = readFileAsString("signature.binary");
+        ByteString signatureBin = new ByteString(readFileAsBytes("signature.binary"));
 
         String message = readFileAsString("message.txt");
 

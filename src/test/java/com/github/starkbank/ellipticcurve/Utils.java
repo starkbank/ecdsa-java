@@ -7,7 +7,6 @@ import java.nio.file.Paths;
 import java.util.Objects;
 
 /**
- * Company: SFL LLC
  * Created on 17-Jan-19
  *
  * @author Taron Petrosyan
@@ -16,6 +15,11 @@ class Utils {
 
     static String readFileAsString(String path) throws URISyntaxException, IOException {
         return new String(Files.readAllBytes(Paths.get(Objects.requireNonNull(ClassLoader.getSystemClassLoader().getResource(path)).toURI())));
+
+    }
+
+    static byte[] readFileAsBytes(String path) throws URISyntaxException, IOException {
+        return Files.readAllBytes(Paths.get(Objects.requireNonNull(ClassLoader.getSystemClassLoader().getResource(path)).toURI()));
 
     }
 }

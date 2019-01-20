@@ -64,7 +64,7 @@ public class PrivateKey {
     public static PrivateKey fromDer(String string) {
         String[] str = removeSequence(string);
         String s = str[0];
-        String empty = str[0];
+        String empty = str[1];
         if (!"".equals(empty)) {
             throw new RuntimeException(String.format("trailing junk after DER privkey: %s", hexlify(empty)));
         }

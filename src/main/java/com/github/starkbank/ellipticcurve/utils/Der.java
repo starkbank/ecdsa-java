@@ -1,12 +1,13 @@
-package com.github.starkbank.ellipticcurve;
+package com.github.starkbank.ellipticcurve.utils;
+
+import com.github.starkbank.ellipticcurve.ByteString;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.BinAscii.unhexlify;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.*;
 
 /**
  * Created on 05-Jan-19
@@ -15,9 +16,13 @@ import static com.github.starkbank.ellipticcurve.BinAscii.unhexlify;
  */
 public class Der {
 
+    private Der() {
+        throw new UnsupportedOperationException("Der is a utility class and cannot be instantiated");
+    }
+
     public static ByteString encodeSequence(ByteString... encodedPieces) {
         int totalLen = 0;
-        ByteString stringPieces = new ByteString(new byte[]{0x30});
+        ByteString stringPieces = new ByteString(toBytes(0x30));
         for (ByteString p : encodedPieces) {
             totalLen += p.length();
             stringPieces.insert(p.getBytes());
@@ -29,14 +34,14 @@ public class Der {
     public static ByteString encodeLength(int length) {
         assert length >= 0;
         if (length < 0x80) {
-            return new ByteString(new byte[]{(byte) length});
+            return new ByteString(toBytes(length));
         }
         String hexString = String.format("%x", length);
         if (hexString.length() % 2 != 0) {
             hexString = "0" + hexString;
         }
         ByteString s = new ByteString(unhexlify(hexString));
-        s.insert(0, new char[]{(char) (0x80 | s.length())});
+        s.insert(0, toBytes((0x80 | s.length())));
         return s;
 
     }
@@ -50,29 +55,29 @@ public class Der {
         ByteString s = new ByteString(unhexlify(h));
         short num = s.getShort(0);
         if (num <= 0x7F) {
-            s.insert(0, new char[]{0x02, (char) s.length()});
+            s.insert(0, toBytes(s.length()));
+            s.insert(0, toBytes(0x02));
             return s;
         }
-        s.insert(0, new char[]{0x02, (char) (s.length() + 1), 0x00});
+        int length = s.length();
+        s.insert(0, toBytes(0x00));
+        s.insert(0, toBytes((length + 1)));
+        s.insert(0, toBytes(0x02));
         return s;
     }
 
-    public static String encodeNumber(long n) {
-        List b128Digits = new ArrayList();
+    public static ByteString encodeNumber(long n) {
+        ByteString b128Digits = new ByteString();
         while (n != 0) {
-            b128Digits.add(0, (n & 0x7f) | 0x80);
+            b128Digits.insert(0, toBytes((int) (n & 0x7f) | 0x80));
             n = n >> 7;
         }
         if (b128Digits.isEmpty()) {
-            b128Digits.add(0);
+            b128Digits.insert(toBytes(0));
         }
-        int lastIndex = b128Digits.size() - 1;
-        b128Digits.add(lastIndex, Integer.valueOf(b128Digits.get(lastIndex).toString()) & 0x7f);
-        StringBuilder string = new StringBuilder();
-        for (Object c : b128Digits) {
-            string.append(c.toString());
-        }
-        return string.toString();
+        int lastIndex = b128Digits.length() - 1;
+        b128Digits.replace(lastIndex, (byte) (b128Digits.getShort(lastIndex) & 0x7f));
+        return b128Digits;
     }
 
     public static ByteString encodeOid(long... pieces) {
@@ -80,31 +85,31 @@ public class Der {
         long second = pieces[1];
         assert first <= 2;
         assert second <= 39;
-        ByteString body = new ByteString(new byte[]{0x06});
+        ByteString body = new ByteString();
         for (int i = 2; i < pieces.length; i++) {
             body.insert(encodeNumber(pieces[i]).getBytes());
         }
-        body.insert(1, encodeLength(body.length()).getBytes());
-        body.insert(1, new char[]{(char) (40 * first + second)});
+        body.insert(0, toBytes((int) (40 * first + second)));
+        body.insert(0, encodeLength(body.length()).getBytes());
+        body.insert(0, toBytes(0x06));
         return body;
     }
 
     public static ByteString encodeBitString(ByteString s) {
-        s.insert(0, new byte[]{0x03});
-        s.insert(1, encodeLength(s.length()).getBytes());
+        s.insert(0, encodeLength(s.length()).getBytes());
+        s.insert(0, toBytes(0x03));
         return s;
     }
 
     public static ByteString encodeOctetString(ByteString s) {
-        s.insert(0, new byte[]{0x04});
-        s.insert(1, encodeLength(s.length()).getBytes());
+        s.insert(0, encodeLength(s.length()).getBytes());
+        s.insert(0, toBytes(0x04));
         return s;
     }
 
     public static ByteString encodeConstructed(long tag, ByteString value) {
-        int length = value.length();
-        value.insert(0, new byte[]{(byte) (0xa0 + tag)});
-        value.insert(1, encodeLength(length).getBytes());
+        value.insert(0, encodeLength(value.length()).getBytes());
+        value.insert(0, toBytes((int) (0xa0 + tag)));
         return value;
     }
 

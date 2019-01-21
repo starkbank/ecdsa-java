@@ -1,8 +1,8 @@
-package com.github.starkbank.ellipticcurve;
+package com.github.starkbank.ellipticcurve.utils;
 
-import java.io.UnsupportedEncodingException;
+import com.github.starkbank.ellipticcurve.ByteString;
+
 import java.math.BigInteger;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -14,16 +14,6 @@ public final class BinAscii {
 
     private BinAscii() {
         throw new UnsupportedOperationException("BinAscii is a utility class and cannot be instantiated");
-    }
-
-    private static String hexlify(String string) {
-        byte[] bytes;
-        try {
-            bytes = string.getBytes("US-ASCII");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Unsupported non ASCII string");
-        }
-        return hexlify(bytes);
     }
 
     public static String hexlify(ByteString string) {
@@ -50,6 +40,10 @@ public final class BinAscii {
             i++;
         }
         return Arrays.copyOfRange(bytes, i, bytes.length);
+    }
+
+    public static byte[] toBytes(int c) {
+        return new byte[]{(byte) c};
     }
 
 }

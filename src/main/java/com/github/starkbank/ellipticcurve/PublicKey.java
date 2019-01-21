@@ -1,11 +1,14 @@
 package com.github.starkbank.ellipticcurve;
 
+import com.github.starkbank.ellipticcurve.utils.Der;
+
 import java.math.BigInteger;
 import java.util.Arrays;
 
-import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.Curve.secp256k1;
 import static com.github.starkbank.ellipticcurve.Curve.supportedCurves;
-import static com.github.starkbank.ellipticcurve.Der.*;
+import static com.github.starkbank.ellipticcurve.utils.Der.*;
 import static com.github.starkbank.ellipticcurve.Math.numberFrom;
 import static com.github.starkbank.ellipticcurve.Math.stringFrom;
 
@@ -114,8 +117,7 @@ public class PublicKey {
     }
 
     public static PublicKey fromString(ByteString string, boolean validatePoint) {
-//        Curve curve = new Curve();
-        return fromString(string, null, validatePoint);
+        return fromString(string, secp256k1, validatePoint);
     }
 
     public static PublicKey fromString(ByteString string) {

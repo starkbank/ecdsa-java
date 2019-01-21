@@ -12,7 +12,8 @@ import java.util.Arrays;
 public class ByteString {
     private byte[] bytes;
 
-    private ByteString() {
+    public ByteString() {
+        bytes = new byte[]{};
     }
 
     public ByteString(byte[] bytes) {
@@ -41,14 +42,6 @@ public class ByteString {
         return new ByteString(Arrays.copyOfRange(bytes, start, end));
     }
 
-    public ByteString[] splitInTwo(int start, int end) {
-        return splitInTwo(start, end, bytes.length);
-    }
-
-    public ByteString[] splitInTwo(int start, int bisector, int end) {
-        return new ByteString[]{substring(start, bisector), substring(bisector, end)};
-    }
-
     public byte[] getBytes() {
         return Arrays.copyOf(bytes, bytes.length);
     }
@@ -65,27 +58,20 @@ public class ByteString {
         this.insert(bytes.length, b);
     }
 
-    public void insert(char[] chars) {
-        this.insert(bytes.length, chars);
-    }
-
-    public void insert(int index, char[] chars) {
-        byte[] b = new byte[chars.length];
-        for (int i = 0; i < chars.length; i++) {
-            b[i] = (byte) chars[i];
-        }
-        this.insert(index, b);
-    }
-
     public void insert(int index, byte[] b) {
         byte[] result = new byte[b.length + bytes.length];
         System.arraycopy(bytes, 0, result, 0, index);
         System.arraycopy(b, 0, result, index, b.length);
-        if(index < bytes.length) {
+        if (index < bytes.length) {
             System.arraycopy(bytes, index, result, b.length + index, bytes.length - index);
         }
         this.bytes = result;
     }
+
+    public void replace(int index, byte value) {
+        bytes[index] = value;
+    }
+
 
     @Override
     public String toString() {

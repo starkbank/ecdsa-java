@@ -1,10 +1,12 @@
 package com.github.starkbank.ellipticcurve;
 
+import com.github.starkbank.ellipticcurve.utils.Base64;
+
 import java.io.IOException;
 import java.math.BigInteger;
 
-import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.Der.*;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.utils.Der.*;
 
 /**
  * Created on 05-Jan-19

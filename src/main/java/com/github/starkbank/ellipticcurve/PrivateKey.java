@@ -1,13 +1,15 @@
 package com.github.starkbank.ellipticcurve;
 
+import com.github.starkbank.ellipticcurve.utils.Der;
+
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Random;
 
-import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
 import static com.github.starkbank.ellipticcurve.Curve.supportedCurves;
-import static com.github.starkbank.ellipticcurve.Der.*;
+import static com.github.starkbank.ellipticcurve.utils.Der.*;
 import static com.github.starkbank.ellipticcurve.Math.*;
 
 /**

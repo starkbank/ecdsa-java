@@ -2,8 +2,8 @@ package com.github.starkbank.ellipticcurve;
 
 import java.math.BigInteger;
 
-import static com.github.starkbank.ellipticcurve.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.BinAscii.unhexlify;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
+import static com.github.starkbank.ellipticcurve.utils.BinAscii.unhexlify;
 
 /**
  * Created on 05-Jan-19

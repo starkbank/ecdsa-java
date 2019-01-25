@@ -23,7 +23,7 @@ public final class Ecdsa {
         BigInteger numberMessage = numberFrom(hashMessage);
         Curve curve = privateKey.curve;
         Random random = new SecureRandom();
-        BigInteger randNum = new BigInteger(curve.n.toByteArray().length * 8 - 1, random);
+        BigInteger randNum = new BigInteger(curve.n.toByteArray().length * 8 - 1, random).abs().add(BigInteger.ONE);
         Point randomSignPoint = multiply(new Point(curve.gX, curve.gY), randNum, curve.n, curve.a, curve.p);
         BigInteger r = randomSignPoint.x.mod(curve.n);
         BigInteger s = ((numberMessage.add(r.multiply(privateKey.secret))).multiply(inv(randNum, curve.n))).mod(curve.n);

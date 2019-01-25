@@ -25,7 +25,7 @@ public class PrivateKey {
     public PrivateKey() {
         this(Curve.secp256k1, null);
         Random random = new SecureRandom();
-        secret = new BigInteger(curve.n.toByteArray().length * 8 - 1, random);
+        secret = new BigInteger(curve.n.toByteArray().length * 8 - 1, random).abs().add(BigInteger.ONE);
     }
 
     public PrivateKey(Curve curve, BigInteger secret) {

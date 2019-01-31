@@ -1,4 +1,4 @@
-package com.github.starkbank.ellipticcurve;
+package com.starkbank.ellipticcurve;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

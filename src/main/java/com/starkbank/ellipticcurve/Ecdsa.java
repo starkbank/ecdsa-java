@@ -1,26 +1,20 @@
-package com.github.starkbank.ellipticcurve;
-
+package com.starkbank.ellipticcurve;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Random;
+import static com.starkbank.ellipticcurve.utils.BinaryAscii.numberFromString;
+import static com.starkbank.ellipticcurve.Math.multiply;
+import static com.starkbank.ellipticcurve.Math.inv;
+import static com.starkbank.ellipticcurve.Math.add;
 
-import static com.github.starkbank.ellipticcurve.Math.*;
 
-/**
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
- */
 public final class Ecdsa {
-    private Ecdsa() {
-        throw new UnsupportedOperationException("Ecdsa is a utility class and cannot be instantiated");
-    }
 
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());
-        BigInteger numberMessage = numberFrom(hashMessage);
+        BigInteger numberMessage = numberFromString(hashMessage);
         Curve curve = privateKey.curve;
         Random random = new SecureRandom();
         BigInteger randNum = new BigInteger(curve.n.toByteArray().length * 8 - 1, random).abs().add(BigInteger.ONE);
@@ -40,7 +34,7 @@ public final class Ecdsa {
 
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());
-        BigInteger numberMessage = numberFrom(hashMessage);
+        BigInteger numberMessage = numberFromString(hashMessage);
         Curve curve = publicKey.curve;
         BigInteger Xpk = publicKey.x;
         BigInteger Ypk = publicKey.y;

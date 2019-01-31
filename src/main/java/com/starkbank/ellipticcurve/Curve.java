@@ -1,20 +1,17 @@
-package com.github.starkbank.ellipticcurve;
-
+package com.starkbank.ellipticcurve;
 import java.math.BigInteger;
 import java.util.*;
 
 /**
  * Elliptic Curve Equation.
  * y^2 = x^3 + a*x + b (mod p)
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
  */
 
 @SuppressWarnings("unchecked")
 public class Curve {
 
     public static class OID {
+
         private long[] oid;
 
         public OID(long[] oid) {
@@ -23,17 +20,6 @@ public class Curve {
 
         public long[] getOid() {
             return oid;
-        }
-
-        public void setOid(long[] oid) {
-            this.oid = oid;
-        }
-
-        @Override
-        public String toString() {
-            return "OID{" +
-                    "oid=" + Arrays.toString(oid) +
-                    '}';
         }
 
         @Override
@@ -111,13 +97,5 @@ public class Curve {
 
     public int length() {
         return (1 + n.toString(16).length()) / 2;
-    }
-
-    @Override
-    public String toString() {
-        return "Curve{" +
-                "name='" + name + '\'' +
-                ", oid=" + oid.toString() +
-                '}';
     }
 }

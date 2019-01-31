@@ -1,28 +1,19 @@
-package com.github.starkbank.ellipticcurve;
-
-import com.github.starkbank.ellipticcurve.utils.Der;
-
+package com.starkbank.ellipticcurve;
+import com.starkbank.ellipticcurve.utils.ByteString;
+import com.starkbank.ellipticcurve.utils.Der;
+import com.starkbank.ellipticcurve.utils.BinaryAscii;
 import java.math.BigInteger;
 import java.util.Arrays;
+import static com.starkbank.ellipticcurve.Curve.secp256k1;
+import static com.starkbank.ellipticcurve.Curve.supportedCurves;
+import static com.starkbank.ellipticcurve.utils.BinaryAscii.numberFromString;
+import static com.starkbank.ellipticcurve.utils.BinaryAscii.stringFromNumber;
 
-import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.Curve.secp256k1;
-import static com.github.starkbank.ellipticcurve.Curve.supportedCurves;
-import static com.github.starkbank.ellipticcurve.utils.Der.*;
-import static com.github.starkbank.ellipticcurve.Math.numberFrom;
-import static com.github.starkbank.ellipticcurve.Math.stringFrom;
 
-/**
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
- */
 public class PublicKey {
 
     public BigInteger x;
-
     public BigInteger y;
-
     public Curve curve;
 
     public PublicKey(BigInteger x, BigInteger y, Curve curve) {
@@ -36,8 +27,8 @@ public class PublicKey {
     }
 
     public ByteString toByteString(boolean encoded) {
-        ByteString xStr = stringFrom(x, curve.length());
-        ByteString yStr = stringFrom(y, curve.length());
+        ByteString xStr = stringFromNumber(x, curve.length());
+        ByteString yStr = stringFromNumber(y, curve.length());
         xStr.insert(yStr.getBytes());
         if(encoded) {
             xStr.insert(0, new byte[]{0, 4} );
@@ -47,8 +38,8 @@ public class PublicKey {
 
     public ByteString toDer() {
         long[] oidEcPublicKey = new long[]{1, 2, 840, 10045, 2, 1};
-        ByteString encodeEcAndOid = encodeSequence(encodeOid(oidEcPublicKey), encodeOid(curve.oid.getOid()));
-        return encodeSequence(encodeEcAndOid, encodeBitString(this.toByteString(true)));
+        ByteString encodeEcAndOid = Der.encodeSequence(Der.encodeOid(oidEcPublicKey), Der.encodeOid(curve.oid.getOid()));
+        return Der.encodeSequence(encodeEcAndOid, Der.encodeBitString(this.toByteString(true)));
     }
 
     public String toPem() {
@@ -60,38 +51,36 @@ public class PublicKey {
     }
 
     public static PublicKey fromDer(ByteString string) {
-        ByteString[] str = removeSequence(string);
+        ByteString[] str = Der.removeSequence(string);
         ByteString s1 = str[0];
         ByteString empty = str[1];
         if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after DER pubkey: %s", hexlify(empty)));
+            throw new RuntimeException (String.format("trailing junk after DER pubkey: %s", BinaryAscii.hexFromBinary(empty)));
         }
-        str = removeSequence(s1);
+        str = Der.removeSequence(s1);
         ByteString s2 = str[0];
         ByteString pointStrBitstring = str[1];
-        Object[] o = removeObject(s2);
+        Object[] o = Der.removeObject(s2);
         ByteString rest = (ByteString) o[1];
-        o = removeObject(rest);
+        o = Der.removeObject(rest);
         long[] oidCurve = (long[]) o[0];
         empty = (ByteString) o[1];
         if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after DER pubkey objects: %s", hexlify(empty)));
+            throw new RuntimeException (String.format("trailing junk after DER pubkey objects: %s", BinaryAscii.hexFromBinary(empty)));
         }
+
         Curve curve = (Curve) Curve.curvesByOid.get(new Curve.OID(oidCurve));
         if (curve == null) {
-            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s",
-                    Arrays.toString(oidCurve), Arrays.toString(supportedCurves.toArray())));
-
+            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s", Arrays.toString(oidCurve), Arrays.toString(supportedCurves.toArray())));
         }
 
-        str = removeBitString(pointStrBitstring);
+        str = Der.removeBitString(pointStrBitstring);
         ByteString pointStr = str[0];
         empty = str[1];
         if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after pubkey pointstring: %s", hexlify(empty)));
+            throw new RuntimeException (String.format("trailing junk after pubkey pointstring: %s", BinaryAscii.hexFromBinary(empty)));
         }
         return PublicKey.fromString(pointStr.substring(2), curve);
-
     }
 
     public static PublicKey fromString(ByteString string, Curve curve, boolean validatePoint) {
@@ -100,8 +89,8 @@ public class PublicKey {
         ByteString xs = string.substring(0, baselen);
         ByteString ys = string.substring(baselen);
 
-        BigInteger x = numberFrom(xs.getBytes());
-        BigInteger y = numberFrom(ys.getBytes());
+        BigInteger x = numberFromString(xs.getBytes());
+        BigInteger y = numberFromString(ys.getBytes());
 
 
         if (validatePoint && !curve.contains(x, y)) {
@@ -109,7 +98,6 @@ public class PublicKey {
         }
 
         return new PublicKey(x, y, curve);
-
     }
 
     public static PublicKey fromString(ByteString string, Curve curve) {

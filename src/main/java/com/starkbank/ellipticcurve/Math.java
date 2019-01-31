@@ -1,63 +1,51 @@
-package com.github.starkbank.ellipticcurve;
-
+package com.starkbank.ellipticcurve;
 import java.math.BigInteger;
 
-import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.utils.BinAscii.unhexlify;
 
-/**
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
- */
 public final class Math {
-
-    private Math() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
-    }
 
     /**
      * Fast way to multiply point and scalar in elliptic curves
      *
-     * @param a First Point to multiply
+     * @param p First Point to multiply
      * @param n Scalar to multiply
      * @param N Order of the elliptic curve
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
      * @return Point that represents the sum of First and Second Point
      */
-    public static Point multiply(Point a, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
-        return fromJacobian(jacobianMultiply(toJacobian(a), n, N, A, P), P);
+    public static Point multiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
+        return fromJacobian(jacobianMultiply(toJacobian(p), n, N, A, P), P);
     }
 
     /**
      * Fast way to add two points in elliptic curves
      *
-     * @param a First Point you want to add
-     * @param b Second Point you want to add
+     * @param p First Point you want to add
+     * @param q Second Point you want to add
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
      * @return Point that represents the sum of First and Second Point
      */
-    public static Point add(Point a, Point b, BigInteger A, BigInteger P) {
-        return fromJacobian(jacobianAdd(toJacobian(a), toJacobian(b), A, P), P);
+    public static Point add(Point p, Point q, BigInteger A, BigInteger P) {
+        return fromJacobian(jacobianAdd(toJacobian(p), toJacobian(q), A, P), P);
     }
 
     /**
      * Extended Euclidean Algorithm. It's the 'division' in elliptic curves
      *
-     * @param a Divisor
+     * @param x Divisor
      * @param n Mod for division
      * @return Value representing the division
      */
-    public static BigInteger inv(BigInteger a, BigInteger n) {
-        if (a.compareTo(BigInteger.ZERO) == 0) {
+    public static BigInteger inv(BigInteger x, BigInteger n) {
+        if (x.compareTo(BigInteger.ZERO) == 0) {
             return BigInteger.ZERO;
         }
         BigInteger lm = BigInteger.ONE;
         BigInteger hm = BigInteger.ZERO;
         BigInteger high = n;
-        BigInteger low = a.mod(n);
+        BigInteger low = x.mod(n);
         BigInteger r, nm, nw;
         while (low.compareTo(BigInteger.ONE) > 0) {
             r = high.divide(low);
@@ -180,28 +168,5 @@ public final class Math {
             return jacobianAdd(jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.valueOf(2)), N, A, P), A, P), p, A, P);
         }
         return null;
-    }
-
-    /**
-     * Get a number representation of a string
-     *
-     * @param string String to be converted in a number
-     * @return Number in hex from string
-     */
-    public static BigInteger numberFrom(byte[] string) {
-        return new BigInteger(hexlify(string), 16);
-    }
-
-    /**
-     * Get a string representation of a number
-     *
-     * @param number number to be converted in a string
-     * @param length length max number of character for the string
-     * @return hexadecimal string
-     */
-    public static ByteString stringFrom(BigInteger number, int length) {
-        String fmtStr = "%0" + String.valueOf(2 * length) + "x";
-        String hexString = String.format(fmtStr, number);
-        return new ByteString(unhexlify(hexString));
     }
 }

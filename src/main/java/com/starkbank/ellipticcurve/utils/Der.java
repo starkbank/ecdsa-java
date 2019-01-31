@@ -1,13 +1,11 @@
-package com.github.starkbank.ellipticcurve.utils;
-
-import com.github.starkbank.ellipticcurve.ByteString;
+package com.starkbank.ellipticcurve.utils;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.github.starkbank.ellipticcurve.utils.BinAscii.*;
+import static com.starkbank.ellipticcurve.utils.BinaryAscii.*;
 
 /**
  * Created on 05-Jan-19
@@ -40,7 +38,7 @@ public class Der {
         if (hexString.length() % 2 != 0) {
             hexString = "0" + hexString;
         }
-        ByteString s = new ByteString(unhexlify(hexString));
+        ByteString s = new ByteString(binaryFromHex(hexString));
         s.insert(0, toBytes((0x80 | s.length())));
         return s;
 
@@ -52,7 +50,7 @@ public class Der {
         if (h.length() % 2 != 0) {
             h = "0" + h;
         }
-        ByteString s = new ByteString(unhexlify(h));
+        ByteString s = new ByteString(binaryFromHex(h));
         short num = s.getShort(0);
         if (num <= 0x7F) {
             s.insert(0, toBytes(s.length()));
@@ -123,7 +121,7 @@ public class Der {
         if (llen > string.length() - 1) {
             throw new RuntimeException("ran out of length bytes");
         }
-        return new int[]{Integer.valueOf(hexlify(string.substring(1, 1 + llen)), 16), 1 + llen};
+        return new int[]{Integer.valueOf(hexFromBinary(string.substring(1, 1 + llen)), 16), 1 + llen};
     }
 
     public static int[] readNumber(ByteString string) {
@@ -165,7 +163,7 @@ public class Der {
         ByteString rest = string.substring(1 + llen + length);
         short nbytes = numberbytes.getShort(0);
         assert nbytes < 0x80;
-        return new Object[]{new BigInteger(hexlify(numberbytes), 16), rest};
+        return new Object[]{new BigInteger(hexFromBinary(numberbytes), 16), rest};
     }
 
     public static Object[] removeObject(ByteString string) {

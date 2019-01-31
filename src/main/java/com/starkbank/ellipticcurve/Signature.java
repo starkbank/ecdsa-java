@@ -1,21 +1,15 @@
-package com.github.starkbank.ellipticcurve;
-
-import com.github.starkbank.ellipticcurve.utils.Base64;
-
+package com.starkbank.ellipticcurve;
+import com.starkbank.ellipticcurve.utils.Base64;
+import com.starkbank.ellipticcurve.utils.BinaryAscii;
+import com.starkbank.ellipticcurve.utils.ByteString;
+import com.starkbank.ellipticcurve.utils.Der;
 import java.io.IOException;
 import java.math.BigInteger;
 
-import static com.github.starkbank.ellipticcurve.utils.BinAscii.hexlify;
-import static com.github.starkbank.ellipticcurve.utils.Der.*;
 
-/**
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
- */
 public class Signature {
-    public BigInteger r;
 
+    public BigInteger r;
     public BigInteger s;
 
     public Signature(BigInteger r, BigInteger s) {
@@ -24,7 +18,7 @@ public class Signature {
     }
 
     public ByteString toDer() {
-        return encodeSequence(encodeInteger(r), encodeInteger(s));
+        return Der.encodeSequence(Der.encodeInteger(r), Der.encodeInteger(s));
     }
 
     public String toBase64() {
@@ -32,20 +26,20 @@ public class Signature {
     }
 
     public static Signature fromDer(ByteString string) {
-        ByteString[] str = removeSequence(string);
+        ByteString[] str = Der.removeSequence(string);
         ByteString rs = str[0];
         ByteString empty = str[1];
         if (!empty.isEmpty()) {
-            throw new RuntimeException(String.format("trailing junk after DER sig: %s", hexlify(empty)));
+            throw new RuntimeException(String.format("trailing junk after DER sig: %s", BinaryAscii.hexFromBinary(empty)));
         }
-        Object[] o = removeInteger(rs);
+        Object[] o = Der.removeInteger(rs);
         BigInteger r = new BigInteger(o[0].toString());
         ByteString rest = (ByteString) o[1];
-        o = removeInteger(rest);
+        o = Der.removeInteger(rest);
         BigInteger s = new BigInteger(o[0].toString());
         empty = (ByteString) o[1];
         if (!empty.isEmpty()) {
-            throw new RuntimeException(String.format("trailing junk after DER numbers: %s", hexlify(empty)));
+            throw new RuntimeException(String.format("trailing junk after DER numbers: %s", BinaryAscii.hexFromBinary(empty)));
         }
         return new Signature(r, s);
     }

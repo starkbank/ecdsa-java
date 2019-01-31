@@ -1,4 +1,4 @@
-package com.github.starkbank.ellipticcurve;
+package com.starkbank.ellipticcurve.utils;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;

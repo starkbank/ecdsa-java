@@ -1,16 +1,11 @@
 package com.starkbank.ellipticcurve;
-
 import org.junit.Test;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-/**
- * Created on 13-Jan-19
- *
- * @author Taron Petrosyan
- */
+
 public class EcdsaTest {
+
     @Test
     public void testVerifyRightMessage() {
         PrivateKey privateKey = new PrivateKey();

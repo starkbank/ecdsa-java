@@ -1,14 +1,9 @@
 package com.starkbank.ellipticcurve;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URISyntaxException;
 
-/**
- * Created on 17-Jan-19
- *
- * @author Taron Petrosyan
- */
+
 class Utils {
 
     static String readFileAsString(String path) throws URISyntaxException, IOException {

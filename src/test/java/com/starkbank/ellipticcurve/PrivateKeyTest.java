@@ -1,15 +1,9 @@
 package com.starkbank.ellipticcurve;
-
 import com.starkbank.ellipticcurve.utils.ByteString;
 import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 
-/**
- * Created on 20-Jan-19
- *
- * @author Taron Petrosyan
- */
+
 public class PrivateKeyTest {
 
     @Test

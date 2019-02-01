@@ -10,8 +10,8 @@ public final class Math {
      * @param p First Point to multiply
      * @param n Scalar to multiply
      * @param N Order of the elliptic curve
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
-     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
     public static Point multiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
@@ -23,8 +23,8 @@ public final class Math {
      *
      * @param p First Point you want to add
      * @param q Second Point you want to add
-     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
     public static Point add(Point p, Point q, BigInteger A, BigInteger P) {
@@ -73,7 +73,7 @@ public final class Math {
      * Convert point back from Jacobian coordinates
      *
      * @param p the point you want to transform
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point in default coordinates
      */
     public static Point fromJacobian(Point p, BigInteger P) {
@@ -87,8 +87,8 @@ public final class Math {
      * Double a point in elliptic curves
      *
      * @param p the point you want to transform
-     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return the result point doubled in elliptic curves
      */
     public static Point jacobianDouble(Point p, BigInteger A, BigInteger P) {
@@ -109,8 +109,8 @@ public final class Math {
      *
      * @param p First Point you want to add
      * @param q Second Point you want to add
-     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
     public static Point jacobianAdd(Point p, Point q, BigInteger A, BigInteger P) {
@@ -147,8 +147,8 @@ public final class Math {
      * @param p First Point to multiply
      * @param n Scalar to multiply
      * @param N Order of the elliptic curve
-     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod p)
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod p)
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the product of First Point and scalar
      */
     public static Point jacobianMultiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {

@@ -2,10 +2,9 @@ package com.starkbank.ellipticcurve;
 import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.Der;
 import com.starkbank.ellipticcurve.utils.BinaryAscii;
+import com.starkbank.ellipticcurve.utils.RandomInteger;
 import java.math.BigInteger;
-import java.security.SecureRandom;
 import java.util.Arrays;
-import java.util.Random;
 
 
 public class PrivateKey {
@@ -15,8 +14,7 @@ public class PrivateKey {
 
     public PrivateKey() {
         this(Curve.secp256k1, null);
-        Random random = new SecureRandom();
-        secret = new BigInteger(curve.n.toByteArray().length * 8 - 1, random).abs().add(BigInteger.ONE);
+        secret = RandomInteger.between(BigInteger.ONE, curve.N);
     }
 
     public PrivateKey(Curve curve, BigInteger secret) {
@@ -26,8 +24,8 @@ public class PrivateKey {
 
     public PublicKey publicKey() {
         Curve curve = this.curve;
-        Point publicKey = Math.multiply(new Point(curve.gX, curve.gY), this.secret, curve.n, curve.a, curve.p);
-        return new PublicKey(publicKey.x, publicKey.y, curve);
+        Point publicPoint = Math.multiply(curve.G, this.secret, curve.N, curve.A, curve.P);
+        return new PublicKey(publicPoint, curve);
     }
 
     public ByteString toByteString() {
@@ -39,7 +37,7 @@ public class PrivateKey {
         return Der.encodeSequence(
                 Der.encodeInteger(BigInteger.valueOf(1)),
                 Der.encodeOctetString(this.toByteString()),
-                Der.encodeConstructed(0, Der.encodeOid(this.curve.oid.getOid())),
+                Der.encodeConstructed(0, Der.encodeOid(this.curve.oid)),
                 Der.encodeConstructed(1, Der.encodeBitString(encodedPublicKey)));
     }
 
@@ -89,12 +87,9 @@ public class PrivateKey {
         if (!"".equals(empty.toString())) {
             throw new RuntimeException(String.format("trailing junk after DER privkey curve_oid: %s", BinaryAscii.hexFromBinary(empty)));
         }
-
-        Curve curve = (Curve) Curve.curvesByOid.get(new Curve.OID(oidCurve));
+        Curve curve = (Curve) Curve.curvesByOid.get(Arrays.hashCode(oidCurve));
         if (curve == null) {
-            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s",
-                    Arrays.toString(oidCurve), Arrays.toString(Curve.supportedCurves.toArray())));
-
+            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s", Arrays.toString(oidCurve), Arrays.toString(Curve.supportedCurves.toArray())));
         }
 
         if (privkeyStr.length() < curve.length()) {

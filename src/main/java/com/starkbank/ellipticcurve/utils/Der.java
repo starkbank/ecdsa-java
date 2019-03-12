@@ -7,11 +7,7 @@ import java.util.List;
 
 import static com.starkbank.ellipticcurve.utils.BinaryAscii.*;
 
-/**
- * Created on 05-Jan-19
- *
- * @author Taron Petrosyan
- */
+
 public class Der {
 
     private Der() {

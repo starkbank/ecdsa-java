@@ -2,12 +2,7 @@ package com.starkbank.ellipticcurve.utils;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
-/**
- * Company: SFL LLC
- * Created on 20-Jan-19
- *
- * @author Taron Petrosyan
- */
+
 public class ByteString {
     private byte[] bytes;
 

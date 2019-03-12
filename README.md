@@ -19,19 +19,32 @@ We currently support `secp256k1`, but it's super easy to add more curves to the 
 How to use it:
 
 ```java
-// Generate Keys
-PrivateKey privateKey = new PrivateKey();
-PublicKey publicKey = privateKey.publicKey();
+import com.starkbank.ellipticcurve.PrivateKey;
+import com.starkbank.ellipticcurve.PublicKey;
+import com.starkbank.ellipticcurve.Signature;
+import com.starkbank.ellipticcurve.Ecdsa;
 
-String message = "My test message";
+public class GenerateKeys{
 
-// Generate Signature
-Signature signature = Ecsda.sign(message, privateKey);
 
-//  Verify if signature is valid
-System.out.println(Ecsda.verify(message, signature, publicKey));
+    public static void main(String[] args){
+        // Generate Keys
+        PrivateKey pvtKey = new PrivateKey();
+        PublicKey publicKey = pvtKey.publicKey();
+
+        String message = "Testing message";
+        // Generate Signature
+        Signature signature = Ecdsa.sign(message, pvtKey);
+
+        // Verify if signature is valid
+        boolean verified = Ecdsa.verify(message, signature, publicKey) ;
+
+        // Return the signature verification status
+        System.out.println("Verified: " + verified);
+
+    }
+}
 ```
-
 ### OpenSSL
 
 This library is compatible with OpenSSL, so you can use it to generate keys:
@@ -50,14 +63,31 @@ openssl dgst -sha256 -sign privateKey.pem -out signatureBinary.txt message.txt
 It's time to verify:
 
 ```java
-String publicKeyPem = new String(Files.readAllBytes(Path.get("publicKey.pem")));
-byte[] signatureBin = Files.readAllBytes(Path.get("signatureBinary.txt"));
-String message = new String(Files.readAllBytes(Path.get("message.txt")));
+import com.starkbank.ellipticcurve.Ecdsa;
+import com.starkbank.ellipticcurve.PublicKey;
+import com.starkbank.ellipticcurve.Signature;
+import com.starkbank.ellipticcurve.utils.ByteString;
+import com.starkbank.ellipticcurve.utils.File;
 
-PublicKey publicKey = PublicKey.fromPem(publicKeyPem);
-Signature signature = Signature.fromDer(signatureBin);
+public class VerifyKeys {
 
-System.out.println(Ecdsa.verify(message, signature, publicKey));
+
+    public static void main(String[] args){
+        // Read files
+        String publicKeyPem = File.read("publicKey.pem");
+        byte[] signatureBin = File.readBytes("signatureBinary.txt");
+        String message = File.read("message.txt");
+
+        ByteString byteString = new ByteString(signatureBin);
+
+        PublicKey publicKey = PublicKey.fromPem(publicKeyPem);
+        Signature signature = Signature.fromDer(byteString);
+
+        // Get verification status:
+        boolean verified = Ecdsa.verify(message, signature, publicKey);
+        System.out.println("Verification status: " + verified);
+    }
+}
 ```
 
 You can also verify it on terminal:
@@ -75,11 +105,21 @@ openssl base64 -in signatureBinary.txt -out signatureBase64.txt
 With this library, you can do it:
 
 ```java
-byte[] signatureBin = Files.readAllBytes(Path.get("signatureBinary.txt"));
+import com.starkbank.ellipticcurve.utils.ByteString;
+import com.starkbank.ellipticcurve.Signature;
+import com.starkbank.ellipticcurve.utils.File;
 
-Signature signature = Signature.fromDer(new ByteString(signatureBin));
+public class GenerateSignature {
 
-System.out.println(signature.toBase64());
+
+    public static void main(String[] args) {
+        // Load signature file
+        byte[] signaturteBin = File.readBytes("signatureBinary.txt");
+        Signature signature = Signature.fromDer(new ByteString(signaturteBin));
+        // Print signature
+        System.out.println(signature.toBase64());
+        }
+}
 ```
 
 [Stark Bank]: https://starkbank.com

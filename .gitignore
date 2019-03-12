@@ -65,3 +65,8 @@ nb-configuration.xml
 ## OS X
 ##########################
 .DS_Store
+
+##########################
+## Example Files
+##########################
+src/main/java/Generate*

@@ -27,6 +27,7 @@ public final class Math {
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
+
     public static Point add(Point p, Point q, BigInteger A, BigInteger P) {
         return fromJacobian(jacobianAdd(toJacobian(p), toJacobian(q), A, P), P);
     }
@@ -66,6 +67,7 @@ public final class Math {
      * @return Point in Jacobian coordinates
      */
     public static Point toJacobian(Point p) {
+
         return new Point(p.x, p.y, BigInteger.ONE);
     }
 

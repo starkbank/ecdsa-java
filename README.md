@@ -136,4 +136,6 @@ public class GenerateSignature {
 ```
 
 ### Run all unit tests
+```shell
 gradle test
+```

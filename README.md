@@ -29,12 +29,12 @@ public class GenerateKeys{
 
     public static void main(String[] args){
         // Generate Keys
-        PrivateKey pvtKey = new PrivateKey();
-        PublicKey publicKey = pvtKey.publicKey();
+        PrivateKey privateKey = new PrivateKey();
+        PublicKey publicKey = privateKey.publicKey();
 
         String message = "Testing message";
         // Generate Signature
-        Signature signature = Ecdsa.sign(message, pvtKey);
+        Signature signature = Ecdsa.sign(message, privateKey);
 
         // Verify if signature is valid
         boolean verified = Ecdsa.verify(message, signature, publicKey) ;

@@ -24,8 +24,8 @@ import com.starkbank.ellipticcurve.PublicKey;
 import com.starkbank.ellipticcurve.Signature;
 import com.starkbank.ellipticcurve.Ecdsa;
 
-public class GenerateKeys{
 
+public class GenerateKeys{
 
     public static void main(String[] args){
         // Generate Keys
@@ -69,8 +69,8 @@ import com.starkbank.ellipticcurve.Signature;
 import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.File;
 
-public class VerifyKeys {
 
+public class VerifyKeys {
 
     public static void main(String[] args){
         // Read files
@@ -109,8 +109,8 @@ import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.Signature;
 import com.starkbank.ellipticcurve.utils.File;
 
-public class GenerateSignature {
 
+public class GenerateSignature {
 
     public static void main(String[] args) {
         // Load signature file

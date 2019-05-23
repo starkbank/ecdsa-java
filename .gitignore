@@ -65,3 +65,12 @@ nb-configuration.xml
 ## OS X
 ##########################
 .DS_Store
+
+##########################
+## Example Files
+##########################
+src/main/java/Generate*
+message.txt
+publicKey.pem
+privateKey.pem
+signatureBinary.txt

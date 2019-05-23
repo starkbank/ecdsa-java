@@ -440,7 +440,7 @@ public class Base64
 
     
     /** Defeats instantiation. */
-    private Base64(){}
+    public Base64(){}
     
 
     

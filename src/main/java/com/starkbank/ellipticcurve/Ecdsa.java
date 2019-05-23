@@ -6,7 +6,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 
-public final class Ecdsa {
+public class Ecdsa {
 
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());

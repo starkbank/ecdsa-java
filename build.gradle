@@ -22,8 +22,8 @@ plugins {
     id 'com.github.kt3k.coveralls' version '2.8.2'
 }
 
-sourceCompatibility = 1.6
-targetCompatibility = 1.6
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
 
 group = GROUP
 version = VERSION_NAME

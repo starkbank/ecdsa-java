@@ -7,7 +7,7 @@ This is a Java fork of [ecdsa-python]
 
 [ecdsa-python]: https://github.com/starkbank/ecdsa-python
 
-It is compatible with OpenSSL and is fast.
+It is compatible with JDK 1.8+ and OpenSSL.
 It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 
 ### Curves

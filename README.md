@@ -4,15 +4,21 @@
 
 This is a Java fork of [ecdsa-python]
 
-
-[ecdsa-python]: https://github.com/starkbank/ecdsa-python
-
 It is compatible with JDK 1.8+ and OpenSSL.
 It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 
 ### Curves
 
 We currently support `secp256k1`, but it's super easy to add more curves to the project. Just add them on `Curve.java`
+
+### Speed
+
+We ran a test on JDK 13.0.1 on a MAC Pro i5 2019. The libraries ran 100 times and showed the average times displayed bellow:
+
+| Library            | sign          | verify  |
+| ------------------ |:-------------:| -------:|
+| [java.security]    |     0.9ms     |  2.4ms  |
+| starkbank-ecdsa    |     4.3ms     |  9.9ms  |
 
 ### Sample Code
 
@@ -139,3 +145,6 @@ public class GenerateSignature {
 ```shell
 gradle test
 ```
+
+[ecdsa-python]: https://github.com/starkbank/ecdsa-python
+[java.security]: https://docs.oracle.com/javase/7/docs/api/index.html

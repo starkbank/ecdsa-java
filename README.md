@@ -7,6 +7,17 @@ This is a Java fork of [ecdsa-python]
 It is compatible with JDK 1.8+ and OpenSSL.
 It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 
+### Installation
+
+#### Maven Central
+```xml
+<dependency>
+    <groupId>com.github.starkbank</groupId>
+    <artifactId>ecdsa-java</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
 ### Curves
 
 We currently support `secp256k1`, but it's super easy to add more curves to the project. Just add them on `Curve.java`
@@ -129,17 +140,6 @@ public class GenerateSignature {
 ```
 
 [Stark Bank]: https://starkbank.com
-
-### How to install
-
-#### Maven Central
-```xml
-<dependency>
-    <groupId>com.github.starkbank</groupId>
-    <artifactId>ecdsa-java</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-</dependency>
-```
 
 ### Run all unit tests
 ```shell

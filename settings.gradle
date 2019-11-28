@@ -7,4 +7,4 @@
  * in the user guide at https://docs.gradle.org/5.1.1/userguide/multi_project_builds.html
  */
 
-rootProject.name = 'ecdsa-java'
+rootProject.name = 'starkbank-ecdsa'

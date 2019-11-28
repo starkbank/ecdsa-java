@@ -13,7 +13,7 @@ It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 ```xml
 <dependency>
     <groupId>com.github.starkbank</groupId>
-    <artifactId>ecdsa-java</artifactId>
+    <artifactId>starkbank-ecdsa</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 </dependency>
 ```

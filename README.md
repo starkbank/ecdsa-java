@@ -4,7 +4,7 @@
 
 This is a Java fork of [ecdsa-python]
 
-It is compatible with JDK 1.8+ and OpenSSL.
+It is compatible with Java 8+ and OpenSSL.
 It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 
 ### Installation

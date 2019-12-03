@@ -10,12 +10,19 @@ It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
 ### Installation
 
 #### Maven Central
+In pom.xml:
+
 ```xml
 <dependency>
     <groupId>com.github.starkbank</groupId>
     <artifactId>starkbank-ecdsa</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 </dependency>
+```
+
+Then run:
+```sh
+mvn clean install
 ```
 
 ### Curves

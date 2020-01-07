@@ -2,17 +2,38 @@
 
 ### Overview
 
-This is a Java fork of [ecdsa-python]
+This is a pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). It is compatible with Java 8+ and OpenSSL. It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA.
 
+### Installation
 
-[ecdsa-python]: https://github.com/starkbank/ecdsa-python
+#### Maven Central
+In pom.xml:
 
-It is compatible with OpenSSL and is fast.
-It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
+```xml
+<dependency>
+    <groupId>com.github.starkbank</groupId>
+    <artifactId>starkbank-ecdsa</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+Then run:
+```sh
+mvn clean install
+```
 
 ### Curves
 
 We currently support `secp256k1`, but it's super easy to add more curves to the project. Just add them on `Curve.java`
+
+### Speed
+
+We ran a test on JDK 13.0.1 on a MAC Pro i5 2019. The libraries ran 100 times and showed the average times displayed bellow:
+
+| Library            | sign          | verify  |
+| ------------------ |:-------------:| -------:|
+| [java.security]    |     0.9ms     |  2.4ms  |
+| starkbank-ecdsa    |     4.3ms     |  9.9ms  |
 
 ### Sample Code
 
@@ -102,7 +123,7 @@ NOTE: If you want to create a Digital Signature to use in the [Stark Bank], you 
 openssl base64 -in signatureBinary.txt -out signatureBase64.txt
 ```
 
-With this library, you can do it:
+You can also verify it with this library:
 
 ```java
 import com.starkbank.ellipticcurve.utils.ByteString;
@@ -124,18 +145,10 @@ public class GenerateSignature {
 
 [Stark Bank]: https://starkbank.com
 
-### How to install
-
-#### Maven Central
-```xml
-<dependency>
-    <groupId>com.github.starkbank</groupId>
-    <artifactId>ecdsa-java</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-</dependency>
-```
-
 ### Run all unit tests
 ```shell
 gradle test
 ```
+
+[ecdsa-python]: https://github.com/starkbank/ecdsa-python
+[java.security]: https://docs.oracle.com/javase/7/docs/api/index.html

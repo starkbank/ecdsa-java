@@ -2,10 +2,7 @@
 
 ### Overview
 
-This is a Java fork of [ecdsa-python]
-
-It is compatible with Java 8+ and OpenSSL.
-It uses some elegant math as Jacobian Coordinates to speed up the ECDSA.
+This is a pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). It is compatible with Java 8+ and OpenSSL. It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA.
 
 ### Installation
 
@@ -126,7 +123,7 @@ NOTE: If you want to create a Digital Signature to use in the [Stark Bank], you 
 openssl base64 -in signatureBinary.txt -out signatureBase64.txt
 ```
 
-With this library, you can do it:
+You can also verify it with this library:
 
 ```java
 import com.starkbank.ellipticcurve.utils.ByteString;

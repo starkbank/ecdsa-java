@@ -11,9 +11,9 @@ In pom.xml:
 
 ```xml
 <dependency>
-    <groupId>com.github.starkbank</groupId>
+    <groupId>com.starkbank</groupId>
     <artifactId>starkbank-ecdsa</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 

@@ -54,10 +54,10 @@ public class Curve {
     );
 
     //List<Curve>
-    public static final List supportedCurves = new ArrayList();
+    public static final List<Object> supportedCurves = new ArrayList<>();
 
     // Map<BigInteger[], Curve>
-    public static final Map curvesByOid = new HashMap();
+    public static final Map<Object, Object> curvesByOid = new HashMap<>();
 
     static {
         supportedCurves.add(secp256k1);

@@ -172,12 +172,13 @@ public class Der {
         int lengthlength = l[1];
         ByteString body = string.substring(1 + lengthlength, 1 + lengthlength + length);
         ByteString rest = string.substring(1 + lengthlength + length);
-        List numbers = new ArrayList();
+        List<Long> numbers = new ArrayList<Long>();
         while (!body.isEmpty()) {
             l = readNumber(body);
             n = l[0];
+            long longN = n;
             int ll = l[1];
-            numbers.add(n);
+            numbers.add(longN);
             body = body.substring(ll);
         }
         long n0 = Integer.valueOf(numbers.remove(0).toString());
@@ -187,7 +188,7 @@ public class Der {
         numbers.add(1, second);
         long[] numbersArray = new long[numbers.size()];
         for (int i = 0; i < numbers.size(); i++) {
-            numbersArray[i] = Long.valueOf(numbers.get(i).toString());
+            numbersArray[i] = numbers.get(i);
         }
         return new Object[]{numbersArray, rest};
     }

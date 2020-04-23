@@ -15,8 +15,7 @@ class Utils {
     }
 
     private static byte[] read(String path) {
-        try {
-            RandomAccessFile f = new RandomAccessFile(path, "r");
+        try (RandomAccessFile f = new RandomAccessFile(path, "r")) {
             if (f.length() > Integer.MAX_VALUE)
                 throw new RuntimeException("File is too large");
             byte[] b = new byte[(int) f.length()];

@@ -135,8 +135,8 @@ public class GenerateSignature {
 
     public static void main(String[] args) {
         // Load signature file
-        byte[] signaturteBin = File.readBytes("signatureBinary.txt");
-        Signature signature = Signature.fromDer(new ByteString(signaturteBin));
+        byte[] signatureBin = File.readBytes("signatureBinary.txt");
+        Signature signature = Signature.fromDer(new ByteString(signatureBin));
         // Print signature
         System.out.println(signature.toBase64());
         }

@@ -12,19 +12,37 @@ public class Signature {
     public BigInteger r;
     public BigInteger s;
 
+    /**
+     *
+     * @param r
+     * @param s
+     */
     public Signature(BigInteger r, BigInteger s) {
         this.r = r;
         this.s = s;
     }
 
+    /**
+     *
+     * @return
+     */
     public ByteString toDer() {
         return Der.encodeSequence(Der.encodeInteger(r), Der.encodeInteger(s));
     }
 
+    /**
+     *
+     * @return
+     */
     public String toBase64() {
         return Base64.encodeBytes(toDer().getBytes());
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static Signature fromDer(ByteString string) {
         ByteString[] str = Der.removeSequence(string);
         ByteString rs = str[0];
@@ -44,6 +62,11 @@ public class Signature {
         return new Signature(r, s);
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static Signature fromBase64(ByteString string) {
         ByteString der = null;
         try {

@@ -10,6 +10,11 @@ import java.nio.file.*;
  **/
 public class File {
 
+    /**
+     *
+     * @param fileName
+     * @return
+     */
     public static String read(String fileName)
     {
         String content = "";
@@ -24,6 +29,11 @@ public class File {
         return content;
     }
 
+    /**
+     *
+     * @param fileName
+     * @return
+     */
     public static byte[] readBytes(String fileName)
     {
         byte[] content = null;

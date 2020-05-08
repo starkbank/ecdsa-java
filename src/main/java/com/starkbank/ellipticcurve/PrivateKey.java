@@ -12,26 +12,46 @@ public class PrivateKey {
     public Curve curve;
     public BigInteger secret;
 
+    /**
+     *
+     */
     public PrivateKey() {
         this(Curve.secp256k1, null);
         secret = RandomInteger.between(BigInteger.ONE, curve.N);
     }
 
+    /**
+     *
+     * @param curve
+     * @param secret
+     */
     public PrivateKey(Curve curve, BigInteger secret) {
         this.curve = curve;
         this.secret = secret;
     }
 
+    /**
+     *
+     * @return
+     */
     public PublicKey publicKey() {
         Curve curve = this.curve;
         Point publicPoint = Math.multiply(curve.G, this.secret, curve.N, curve.A, curve.P);
         return new PublicKey(publicPoint, curve);
     }
 
+    /**
+     *
+     * @return
+     */
     public ByteString toByteString() {
         return BinaryAscii.stringFromNumber(this.secret, this.curve.length());
     }
 
+    /**
+     *
+     * @return
+     */
     public ByteString toDer() {
         ByteString encodedPublicKey = this.publicKey().toByteString(true);
         return Der.encodeSequence(
@@ -41,20 +61,39 @@ public class PrivateKey {
                 Der.encodeConstructed(1, Der.encodeBitString(encodedPublicKey)));
     }
 
+    /**
+     *
+     * @return
+     */
     public String toPem() {
         return Der.toPem(this.toDer(), "EC PRIVATE KEY");
     }
 
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PrivateKey fromPem(String string) {
         String privkeyPem = string.substring(string.indexOf("-----BEGIN EC PRIVATE KEY-----"));
         return PrivateKey.fromDer(Der.fromPem(privkeyPem));
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PrivateKey fromDer(String string) {
         return fromDer(new ByteString(string.getBytes()));
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PrivateKey fromDer(ByteString string) {
         ByteString[] str = Der.removeSequence(string);
         ByteString s = str[0];
@@ -106,14 +145,30 @@ public class PrivateKey {
         return PrivateKey.fromString(privkeyStr, curve);
     }
 
+    /**
+     *
+     * @param string
+     * @param curve
+     * @return
+     */
     public static PrivateKey fromString(ByteString string, Curve curve) {
         return new PrivateKey(curve, BinaryAscii.numberFromString(string.getBytes()));
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PrivateKey fromString(String string) {
         return fromString(new ByteString(string.getBytes()));
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PrivateKey fromString(ByteString string) {
         return PrivateKey.fromString(string, Curve.secp256k1);
     }

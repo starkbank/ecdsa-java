@@ -74,3 +74,4 @@ message.txt
 publicKey.pem
 privateKey.pem
 signatureBinary.txt
+gradle.properties

@@ -8,6 +8,14 @@ import java.security.NoSuchAlgorithmException;
 
 public class Ecdsa {
 
+    /**
+     *
+     * @param message
+     * @param privateKey
+     * @param hashfunc
+     * @return
+     */
+
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());
         BigInteger numberMessage = BinaryAscii.numberFromString(hashMessage);
@@ -19,6 +27,12 @@ public class Ecdsa {
         return new Signature(r, s);
     }
 
+    /**
+     *
+     * @param message
+     * @param privateKey
+     * @return
+     */
     public static Signature sign(String message, PrivateKey privateKey) {
         try {
             return sign(message, privateKey, MessageDigest.getInstance("SHA-256"));
@@ -27,6 +41,14 @@ public class Ecdsa {
         }
     }
 
+    /**
+     *
+     * @param message
+     * @param signature
+     * @param publicKey
+     * @param hashfunc
+     * @return
+     */
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());
         BigInteger numberMessage = BinaryAscii.numberFromString(hashMessage);
@@ -40,6 +62,13 @@ public class Ecdsa {
         return r.compareTo(point.x) == 0;
     }
 
+    /**
+     * 
+     * @param message
+     * @param signature
+     * @param publicKey
+     * @return
+     */
     public static boolean verify(String message, Signature signature, PublicKey publicKey) {
         try {
             return verify(message, signature, publicKey, MessageDigest.getInstance("SHA-256"));

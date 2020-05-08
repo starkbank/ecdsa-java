@@ -12,15 +12,29 @@ public class PublicKey {
     public Point point;
     public Curve curve;
 
+    /**
+     *
+     * @param point
+     * @param curve
+     */
     public PublicKey(Point point, Curve curve) {
         this.point = point;
         this.curve = curve;
     }
 
+    /**
+     *
+     * @return
+     */
     public ByteString toByteString() {
         return toByteString(false);
     }
 
+    /**
+     *
+     * @param encoded
+     * @return
+     */
     public ByteString toByteString(boolean encoded) {
         ByteString xStr = BinaryAscii.stringFromNumber(point.x, curve.length());
         ByteString yStr = BinaryAscii.stringFromNumber(point.y, curve.length());
@@ -31,20 +45,38 @@ public class PublicKey {
         return xStr;
     }
 
+    /**
+     *
+     * @return
+     */
     public ByteString toDer() {
         long[] oidEcPublicKey = new long[]{1, 2, 840, 10045, 2, 1};
         ByteString encodeEcAndOid = Der.encodeSequence(Der.encodeOid(oidEcPublicKey), Der.encodeOid(curve.oid));
         return Der.encodeSequence(encodeEcAndOid, Der.encodeBitString(this.toByteString(true)));
     }
 
+    /**
+     *
+     * @return
+     */
     public String toPem() {
         return Der.toPem(this.toDer(), "PUBLIC KEY");
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PublicKey fromPem(String string) {
         return PublicKey.fromDer(Der.fromPem(string));
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PublicKey fromDer(ByteString string) {
         ByteString[] str = Der.removeSequence(string);
         ByteString s1 = str[0];
@@ -78,6 +110,13 @@ public class PublicKey {
         return PublicKey.fromString(pointStr.substring(2), curve);
     }
 
+    /**
+     *
+     * @param string
+     * @param curve
+     * @param validatePoint
+     * @return
+     */
     public static PublicKey fromString(ByteString string, Curve curve, boolean validatePoint) {
         int baselen = curve.length();
 
@@ -93,14 +132,31 @@ public class PublicKey {
         return new PublicKey(p, curve);
     }
 
+    /**
+     *
+     * @param string
+     * @param curve
+     * @return
+     */
     public static PublicKey fromString(ByteString string, Curve curve) {
         return fromString(string, curve, true);
     }
 
+    /**
+     *
+     * @param string
+     * @param validatePoint
+     * @return
+     */
     public static PublicKey fromString(ByteString string, boolean validatePoint) {
         return fromString(string, secp256k1, validatePoint);
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static PublicKey fromString(ByteString string) {
         return fromString(string, true);
     }

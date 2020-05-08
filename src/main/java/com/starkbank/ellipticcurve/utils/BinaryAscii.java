@@ -5,10 +5,20 @@ import java.util.Arrays;
 
 public final class BinaryAscii {
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static String hexFromBinary(ByteString string) {
         return hexFromBinary(string.getBytes());
     }
 
+    /**
+     *
+     * @param bytes
+     * @return
+     */
     public static String hexFromBinary(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
 
@@ -22,6 +32,11 @@ public final class BinaryAscii {
         return hexString.toString();
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static byte[] binaryFromHex(String string) {
         byte[] bytes = new BigInteger(string, 16).toByteArray();
         int i = 0;
@@ -31,6 +46,11 @@ public final class BinaryAscii {
         return Arrays.copyOfRange(bytes, i, bytes.length);
     }
 
+    /**
+     *
+     * @param c
+     * @return
+     */
     public static byte[] toBytes(int c) {
         return new byte[]{(byte) c};
     }

@@ -14,6 +14,11 @@ public class Der {
         throw new UnsupportedOperationException("Der is a utility class and cannot be instantiated");
     }
 
+    /**
+     *
+     * @param encodedPieces
+     * @return
+     */
     public static ByteString encodeSequence(ByteString... encodedPieces) {
         int totalLen = 0;
         ByteString stringPieces = new ByteString(toBytes(0x30));
@@ -25,6 +30,11 @@ public class Der {
         return stringPieces;
     }
 
+    /**
+     *
+     * @param length
+     * @return
+     */
     public static ByteString encodeLength(int length) {
         assert length >= 0;
         if (length < 0x80) {
@@ -40,6 +50,11 @@ public class Der {
 
     }
 
+    /**
+     *
+     * @param r
+     * @return
+     */
     public static ByteString encodeInteger(BigInteger r) {
         assert r.compareTo(BigInteger.ZERO) >= 0;
         String h = String.format("%x", r);
@@ -60,6 +75,11 @@ public class Der {
         return s;
     }
 
+    /**
+     *
+     * @param n
+     * @return
+     */
     public static ByteString encodeNumber(long n) {
         ByteString b128Digits = new ByteString();
         while (n != 0) {
@@ -74,6 +94,11 @@ public class Der {
         return b128Digits;
     }
 
+    /**
+     *
+     * @param pieces
+     * @return
+     */
     public static ByteString encodeOid(long... pieces) {
         long first = pieces[0];
         long second = pieces[1];
@@ -89,24 +114,45 @@ public class Der {
         return body;
     }
 
+    /**
+     *
+     * @param s
+     * @return
+     */
     public static ByteString encodeBitString(ByteString s) {
         s.insert(0, encodeLength(s.length()).getBytes());
         s.insert(0, toBytes(0x03));
         return s;
     }
 
+    /**
+     *
+     * @param s
+     * @return
+     */
     public static ByteString encodeOctetString(ByteString s) {
         s.insert(0, encodeLength(s.length()).getBytes());
         s.insert(0, toBytes(0x04));
         return s;
     }
 
+    /**
+     *
+     * @param tag
+     * @param value
+     * @return
+     */
     public static ByteString encodeConstructed(long tag, ByteString value) {
         value.insert(0, encodeLength(value.length()).getBytes());
         value.insert(0, toBytes((int) (0xa0 + tag)));
         return value;
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static int[] readLength(ByteString string) {
         short num = string.getShort(0);
         if ((num & 0x80) == 0) {
@@ -120,6 +166,11 @@ public class Der {
         return new int[]{Integer.valueOf(hexFromBinary(string.substring(1, 1 + llen)), 16), 1 + llen};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static int[] readNumber(ByteString string) {
         int number = 0;
         int llen = 0;
@@ -137,6 +188,11 @@ public class Der {
         return new int[]{number, llen};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static ByteString[] removeSequence(ByteString string) {
         short n = string.getShort(0);
         if (n != 0x30) {
@@ -147,6 +203,11 @@ public class Der {
         return new ByteString[]{string.substring(1 + l[1], (int) endseq), string.substring((int) endseq)};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static Object[] removeInteger(ByteString string) {
         short n = string.getShort(0);
         if (n != 0x02) {
@@ -162,6 +223,11 @@ public class Der {
         return new Object[]{new BigInteger(hexFromBinary(numberbytes), 16), rest};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static Object[] removeObject(ByteString string) {
         int n = string.getShort(0);
         if (n != 0x06) {
@@ -192,6 +258,11 @@ public class Der {
         return new Object[]{numbersArray, rest};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static ByteString[] removeBitString(ByteString string) {
         short n = string.getShort(0);
         if (n != 0x03) {
@@ -205,6 +276,11 @@ public class Der {
         return new ByteString[]{body, rest};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static ByteString[] removeOctetString(ByteString string) {
         short n = string.getShort(0);
         if (n != 0x04) {
@@ -218,6 +294,11 @@ public class Der {
         return new ByteString[]{body, rest};
     }
 
+    /**
+     *
+     * @param string
+     * @return
+     */
     public static Object[] removeConstructed(ByteString string) {
         short s0 = string.getShort(0);
         if ((s0 & 0xe0) != 0xa0) {
@@ -232,6 +313,11 @@ public class Der {
         return new Object[]{tag, body, rest};
     }
 
+    /**
+     *
+     * @param pem
+     * @return
+     */
     public static ByteString fromPem(String pem) {
         String[] pieces = pem.split("\n");
         StringBuilder d = new StringBuilder();
@@ -247,6 +333,12 @@ public class Der {
         }
     }
 
+    /**
+     *
+     * @param der
+     * @param name
+     * @return
+     */
     public static String toPem(ByteString der, String name) {
         String b64 = Base64.encodeBytes(der.getBytes());
         StringBuilder lines = new StringBuilder();
@@ -258,5 +350,4 @@ public class Der {
         lines.append(String.format("-----END %s-----\n", name));
         return lines.toString();
     }
-
 }

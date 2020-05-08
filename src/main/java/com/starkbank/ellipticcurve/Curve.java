@@ -18,6 +18,17 @@ public class Curve {
     public String name;
     public long[] oid;
 
+    /**
+     *
+     * @param A
+     * @param B
+     * @param P
+     * @param N
+     * @param Gx
+     * @param Gy
+     * @param name
+     * @param oid
+     */
     public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid) {
         this.A = A;
         this.B = B;
@@ -38,10 +49,17 @@ public class Curve {
         return p.y.pow(2).subtract(p.x.pow(3).add(A.multiply(p.x)).add(B)).mod(P).intValue() == 0;
     }
 
+    /**
+     *
+     * @return
+     */
     public int length() {
         return (1 + N.toString(16).length()) / 2;
     }
 
+    /**
+     *
+     */
     public static final Curve secp256k1 = new Curve(
         BigInteger.ZERO,
         BigInteger.valueOf(7),
@@ -53,10 +71,14 @@ public class Curve {
         new long[]{1, 3, 132, 0, 10}
     );
 
-    //List<Curve>
+    /**
+     *
+     */
     public static final List supportedCurves = new ArrayList();
 
-    // Map<BigInteger[], Curve>
+    /**
+     *
+     */
     public static final Map curvesByOid = new HashMap();
 
     static {

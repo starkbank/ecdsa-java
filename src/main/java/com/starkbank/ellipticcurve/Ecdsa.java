@@ -55,6 +55,20 @@ public class Ecdsa {
         Curve curve = publicKey.curve;
         BigInteger r = signature.r;
         BigInteger s = signature.s;
+
+        if (r.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+            return false;
+        }
+        if (r.compareTo(curve.N) >= 0) {
+            return false;
+        }
+        if (s.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+            return false;
+        }
+        if (s.compareTo(curve.N) >= 0) {
+            return false;
+        }
+        
         BigInteger w = Math.inv(s, curve.N);
         Point u1 =Math.multiply(curve.G, numberMessage.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);
         Point u2 = Math.multiply(publicKey.point, r.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);

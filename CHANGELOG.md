@@ -13,6 +13,8 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 
 ## [Unreleased]
+
+## [1.0.1] - 2021-11-04
 ### Fixed
 - Signature r and s range check
 

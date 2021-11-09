@@ -16,8 +16,8 @@ public class Der {
 
     /**
      *
-     * @param encodedPieces
-     * @return
+     * @param encodedPieces encodedPieces
+     * @return ByteString
      */
     public static ByteString encodeSequence(ByteString... encodedPieces) {
         int totalLen = 0;
@@ -32,8 +32,8 @@ public class Der {
 
     /**
      *
-     * @param length
-     * @return
+     * @param length length
+     * @return ByteString
      */
     public static ByteString encodeLength(int length) {
         assert length >= 0;
@@ -52,8 +52,8 @@ public class Der {
 
     /**
      *
-     * @param r
-     * @return
+     * @param r r
+     * @return ByteString
      */
     public static ByteString encodeInteger(BigInteger r) {
         assert r.compareTo(BigInteger.ZERO) >= 0;
@@ -77,8 +77,8 @@ public class Der {
 
     /**
      *
-     * @param n
-     * @return
+     * @param n n
+     * @return ByteString
      */
     public static ByteString encodeNumber(long n) {
         ByteString b128Digits = new ByteString();
@@ -96,8 +96,8 @@ public class Der {
 
     /**
      *
-     * @param pieces
-     * @return
+     * @param pieces pieces
+     * @return ByteString
      */
     public static ByteString encodeOid(long... pieces) {
         long first = pieces[0];
@@ -116,8 +116,8 @@ public class Der {
 
     /**
      *
-     * @param s
-     * @return
+     * @param s s
+     * @return ByteString
      */
     public static ByteString encodeBitString(ByteString s) {
         s.insert(0, encodeLength(s.length()).getBytes());
@@ -127,8 +127,8 @@ public class Der {
 
     /**
      *
-     * @param s
-     * @return
+     * @param s s
+     * @return ByteString
      */
     public static ByteString encodeOctetString(ByteString s) {
         s.insert(0, encodeLength(s.length()).getBytes());
@@ -138,9 +138,9 @@ public class Der {
 
     /**
      *
-     * @param tag
-     * @param value
-     * @return
+     * @param tag tag
+     * @param value value
+     * @return ByteString
      */
     public static ByteString encodeConstructed(long tag, ByteString value) {
         value.insert(0, encodeLength(value.length()).getBytes());
@@ -150,8 +150,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return int[]
      */
     public static int[] readLength(ByteString string) {
         short num = string.getShort(0);
@@ -168,8 +168,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return int[]
      */
     public static int[] readNumber(ByteString string) {
         int number = 0;
@@ -190,8 +190,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return ByteString[]
      */
     public static ByteString[] removeSequence(ByteString string) {
         short n = string.getShort(0);
@@ -205,8 +205,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return Object[]
      */
     public static Object[] removeInteger(ByteString string) {
         short n = string.getShort(0);
@@ -225,8 +225,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return Object[]
      */
     public static Object[] removeObject(ByteString string) {
         int n = string.getShort(0);
@@ -260,8 +260,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return ByteString
      */
     public static ByteString[] removeBitString(ByteString string) {
         short n = string.getShort(0);
@@ -278,8 +278,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return ByteString[]
      */
     public static ByteString[] removeOctetString(ByteString string) {
         short n = string.getShort(0);
@@ -296,8 +296,8 @@ public class Der {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return Object[]
      */
     public static Object[] removeConstructed(ByteString string) {
         short s0 = string.getShort(0);
@@ -315,8 +315,8 @@ public class Der {
 
     /**
      *
-     * @param pem
-     * @return
+     * @param pem pem
+     * @return ByteString
      */
     public static ByteString fromPem(String pem) {
         String[] pieces = pem.split("\n");
@@ -335,9 +335,9 @@ public class Der {
 
     /**
      *
-     * @param der
-     * @param name
-     * @return
+     * @param der der
+     * @param name name
+     * @return String
      */
     public static String toPem(ByteString der, String name) {
         String b64 = Base64.encodeBytes(der.getBytes());

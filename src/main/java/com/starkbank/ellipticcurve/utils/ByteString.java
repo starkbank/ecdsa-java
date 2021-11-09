@@ -15,7 +15,7 @@ public class ByteString {
 
     /**
      *
-     * @param bytes
+     * @param bytes byte[]
      */
     public ByteString(byte[] bytes) {
         this.bytes = bytes;
@@ -23,8 +23,8 @@ public class ByteString {
 
     /**
      *
-     * @param index
-     * @return
+     * @param index index
+     * @return short
      */
     public short getShort(int index) {
         return (short) (bytes[index] & 0xFF);
@@ -32,8 +32,8 @@ public class ByteString {
 
     /**
      *
-     * @param start
-     * @return
+     * @param start start
+     * @return ByteString
      */
     public ByteString substring(int start) {
         return substring(start, bytes.length);
@@ -41,9 +41,9 @@ public class ByteString {
 
     /**
      *
-     * @param start
-     * @param end
-     * @return
+     * @param start start
+     * @param end end
+     * @return ByteString
      */
     public ByteString substring(int start, int end) {
         if (end > bytes.length) {
@@ -61,7 +61,7 @@ public class ByteString {
 
     /**
      *
-     * @return
+     * @return byte[]
      */
     public byte[] getBytes() {
         return Arrays.copyOf(bytes, bytes.length);
@@ -69,7 +69,7 @@ public class ByteString {
 
     /**
      *
-     * @return
+     * @return int
      */
     public int length() {
         return bytes.length;
@@ -77,7 +77,7 @@ public class ByteString {
 
     /**
      *
-     * @return
+     * @return boolean
      */
     public boolean isEmpty() {
         return bytes.length == 0;
@@ -85,7 +85,7 @@ public class ByteString {
 
     /**
      *
-     * @param b
+     * @param b b
      */
     public void insert(byte[] b) {
         this.insert(bytes.length, b);
@@ -93,8 +93,8 @@ public class ByteString {
 
     /**
      *
-     * @param index
-     * @param b
+     * @param index index
+     * @param b b
      */
     public void insert(int index, byte[] b) {
         byte[] result = new byte[b.length + bytes.length];
@@ -108,8 +108,8 @@ public class ByteString {
 
     /**
      *
-     * @param index
-     * @param value
+     * @param index index
+     * @param value value
      */
     public void replace(int index, byte value) {
         bytes[index] = value;
@@ -117,7 +117,7 @@ public class ByteString {
 
     /**
      *
-     * @return
+     * @return string
      */
     @Override
     public String toString() {

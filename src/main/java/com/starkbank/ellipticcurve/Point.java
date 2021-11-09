@@ -10,8 +10,8 @@ public class Point {
 
     /**
      *
-     * @param x
-     * @param y
+     * @param x x
+     * @param y y
      */
     public Point(BigInteger x, BigInteger y) {
         this.x = x;
@@ -21,9 +21,9 @@ public class Point {
 
     /**
      *
-     * @param x
-     * @param y
-     * @param z
+     * @param x x
+     * @param y y
+     * @param z z
      */
     public Point(BigInteger x, BigInteger y, BigInteger z) {
         this.x = x;

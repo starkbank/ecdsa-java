@@ -7,8 +7,8 @@ public final class BinaryAscii {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string byteString
+     * @return String
      */
     public static String hexFromBinary(ByteString string) {
         return hexFromBinary(string.getBytes());
@@ -16,8 +16,8 @@ public final class BinaryAscii {
 
     /**
      *
-     * @param bytes
-     * @return
+     * @param bytes byte[]
+     * @return String
      */
     public static String hexFromBinary(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
@@ -34,8 +34,8 @@ public final class BinaryAscii {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return byte[]
      */
     public static byte[] binaryFromHex(String string) {
         byte[] bytes = new BigInteger(string, 16).toByteArray();
@@ -48,8 +48,8 @@ public final class BinaryAscii {
 
     /**
      *
-     * @param c
-     * @return
+     * @param c c
+     * @return byte[]
      */
     public static byte[] toBytes(int c) {
         return new byte[]{(byte) c};

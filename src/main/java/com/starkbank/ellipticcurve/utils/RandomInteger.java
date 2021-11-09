@@ -8,9 +8,9 @@ public class RandomInteger {
 
     /**
      *
-     * @param start
-     * @param end
-     * @return
+     * @param start start
+     * @param end end
+     * @return BigInteger
      */
     public static BigInteger between(BigInteger start, BigInteger end) {
         Random random = new SecureRandom();

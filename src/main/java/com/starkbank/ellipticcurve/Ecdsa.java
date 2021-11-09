@@ -10,10 +10,10 @@ public class Ecdsa {
 
     /**
      *
-     * @param message
-     * @param privateKey
-     * @param hashfunc
-     * @return
+     * @param message message
+     * @param privateKey privateKey
+     * @param hashfunc hashfunc
+     * @return Signature
      */
 
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
@@ -29,9 +29,9 @@ public class Ecdsa {
 
     /**
      *
-     * @param message
-     * @param privateKey
-     * @return
+     * @param message message
+     * @param privateKey privateKey
+     * @return Signature
      */
     public static Signature sign(String message, PrivateKey privateKey) {
         try {
@@ -43,11 +43,11 @@ public class Ecdsa {
 
     /**
      *
-     * @param message
-     * @param signature
-     * @param publicKey
-     * @param hashfunc
-     * @return
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @param hashfunc hashfunc
+     * @return boolean
      */
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
         byte[] hashMessage = hashfunc.digest(message.getBytes());
@@ -78,10 +78,10 @@ public class Ecdsa {
 
     /**
      * 
-     * @param message
-     * @param signature
-     * @param publicKey
-     * @return
+     * @param message message
+     * @param signature signature
+     * @param publicKey publicKey
+     * @return boolean
      */
     public static boolean verify(String message, Signature signature, PublicKey publicKey) {
         try {

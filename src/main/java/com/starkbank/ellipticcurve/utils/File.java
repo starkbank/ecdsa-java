@@ -12,8 +12,8 @@ public class File {
 
     /**
      *
-     * @param fileName
-     * @return
+     * @param fileName fileName
+     * @return String
      */
     public static String read(String fileName)
     {
@@ -31,8 +31,8 @@ public class File {
 
     /**
      *
-     * @param fileName
-     * @return
+     * @param fileName fileName
+     * @return byte[]
      */
     public static byte[] readBytes(String fileName)
     {

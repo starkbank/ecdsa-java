@@ -14,8 +14,8 @@ public class Signature {
 
     /**
      *
-     * @param r
-     * @param s
+     * @param r r
+     * @param s s
      */
     public Signature(BigInteger r, BigInteger s) {
         this.r = r;
@@ -24,7 +24,7 @@ public class Signature {
 
     /**
      *
-     * @return
+     * @return ByteString
      */
     public ByteString toDer() {
         return Der.encodeSequence(Der.encodeInteger(r), Der.encodeInteger(s));
@@ -32,7 +32,7 @@ public class Signature {
 
     /**
      *
-     * @return
+     * @return String
      */
     public String toBase64() {
         return Base64.encodeBytes(toDer().getBytes());
@@ -40,8 +40,8 @@ public class Signature {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string byteString
+     * @return Signature
      */
     public static Signature fromDer(ByteString string) {
         ByteString[] str = Der.removeSequence(string);
@@ -64,8 +64,8 @@ public class Signature {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string byteString
+     * @return Signature
      */
     public static Signature fromBase64(ByteString string) {
         ByteString der = null;

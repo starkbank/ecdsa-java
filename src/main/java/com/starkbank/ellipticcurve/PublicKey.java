@@ -14,8 +14,8 @@ public class PublicKey {
 
     /**
      *
-     * @param point
-     * @param curve
+     * @param point point
+     * @param curve curve
      */
     public PublicKey(Point point, Curve curve) {
         this.point = point;
@@ -24,7 +24,7 @@ public class PublicKey {
 
     /**
      *
-     * @return
+     * @return ByteString
      */
     public ByteString toByteString() {
         return toByteString(false);
@@ -32,8 +32,8 @@ public class PublicKey {
 
     /**
      *
-     * @param encoded
-     * @return
+     * @param encoded encoded
+     * @return ByteString
      */
     public ByteString toByteString(boolean encoded) {
         ByteString xStr = BinaryAscii.stringFromNumber(point.x, curve.length());
@@ -47,7 +47,7 @@ public class PublicKey {
 
     /**
      *
-     * @return
+     * @return ByteString
      */
     public ByteString toDer() {
         long[] oidEcPublicKey = new long[]{1, 2, 840, 10045, 2, 1};
@@ -57,7 +57,7 @@ public class PublicKey {
 
     /**
      *
-     * @return
+     * @return String
      */
     public String toPem() {
         return Der.toPem(this.toDer(), "PUBLIC KEY");
@@ -65,8 +65,8 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string string
+     * @return PublicKey
      */
     public static PublicKey fromPem(String string) {
         return PublicKey.fromDer(Der.fromPem(string));
@@ -74,8 +74,8 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string byteString
+     * @return PublicKey
      */
     public static PublicKey fromDer(ByteString string) {
         ByteString[] str = Der.removeSequence(string);
@@ -112,10 +112,10 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @param curve
-     * @param validatePoint
-     * @return
+     * @param string byteString
+     * @param curve curve
+     * @param validatePoint validatePoint
+     * @return PublicKey
      */
     public static PublicKey fromString(ByteString string, Curve curve, boolean validatePoint) {
         int baselen = curve.length();
@@ -134,9 +134,9 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @param curve
-     * @return
+     * @param string byteString
+     * @param curve curve
+     * @return PublicKey
      */
     public static PublicKey fromString(ByteString string, Curve curve) {
         return fromString(string, curve, true);
@@ -144,9 +144,9 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @param validatePoint
-     * @return
+     * @param string byteString
+     * @param validatePoint validatePoint
+     * @return PublicKey
      */
     public static PublicKey fromString(ByteString string, boolean validatePoint) {
         return fromString(string, secp256k1, validatePoint);
@@ -154,8 +154,8 @@ public class PublicKey {
 
     /**
      *
-     * @param string
-     * @return
+     * @param string byteString
+     * @return PublicKey
      */
     public static PublicKey fromString(ByteString string) {
         return fromString(string, true);

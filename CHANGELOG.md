@@ -13,6 +13,8 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 
 ## [Unreleased]
+
+## [1.0.2] - 2021-11-09
 ### Fixed
 - point at infinity verification in signature and public key
 

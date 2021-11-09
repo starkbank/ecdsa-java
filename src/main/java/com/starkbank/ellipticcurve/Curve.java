@@ -46,6 +46,18 @@ public class Curve {
      * @return true if point is in the curve otherwise false
      */
     public boolean contains(Point p) {
+        if (p.x.compareTo(BigInteger.ZERO) < 0) {
+            return false;
+        }
+        if (p.x.compareTo(this.P) >= 0) {
+            return false;
+        }
+        if (p.y.compareTo(BigInteger.ZERO) < 0) {
+            return false;
+        }
+        if (p.y.compareTo(this.P) >= 0) {
+            return false;
+        }
         return p.y.pow(2).subtract(p.x.pow(3).add(A.multiply(p.x)).add(B)).mod(P).intValue() == 0;
     }
 

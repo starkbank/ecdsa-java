@@ -125,11 +125,20 @@ public class PublicKey {
 
         Point p = new Point(BinaryAscii.numberFromString(xs.getBytes()), BinaryAscii.numberFromString(ys.getBytes()));
 
-        if (validatePoint && !curve.contains(p)) {
-            throw new  RuntimeException(String.format("point (%s,%s) is not valid", p.x, p.y));
+        PublicKey publicKey = new PublicKey(p, curve);
+        if (!validatePoint) {
+            return publicKey;
         }
-
-        return new PublicKey(p, curve);
+        if (p.isAtInfinity()) {
+            throw new RuntimeException("Public Key point is at infinity");
+        }
+        if (!curve.contains(p)) {
+            throw new RuntimeException(String.format("Point (%s,%s) is not valid for curve %s", p.x, p.y, curve.name));
+        }
+        if (!Math.multiply(p, curve.N, curve.N, curve.A, curve.P).isAtInfinity()) {
+            throw new RuntimeException(String.format("Point (%s,%s) * %s.N is not at infinity", p.x, p.y, curve.name));
+        }
+        return publicKey;
     }
 
     /**

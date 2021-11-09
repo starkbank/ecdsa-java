@@ -20,14 +20,14 @@ public class Curve {
 
     /**
      *
-     * @param A
-     * @param B
-     * @param P
-     * @param N
-     * @param Gx
-     * @param Gy
-     * @param name
-     * @param oid
+     * @param A A
+     * @param B B
+     * @param P P
+     * @param N N
+     * @param Gx Gx
+     * @param Gy Gy
+     * @param name name
+     * @param oid oid
      */
     public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid) {
         this.A = A;
@@ -51,7 +51,7 @@ public class Curve {
 
     /**
      *
-     * @return
+     * @return int
      */
     public int length() {
         return (1 + N.toString(16).length()) / 2;

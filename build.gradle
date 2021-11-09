@@ -59,16 +59,16 @@ uploadArchives {
             }
 
             pom.project {
-                name 'StarkBank SDK Java'
+                name 'StarkBank ECDSA library'
                 packaging 'jar'
                 // optionally artifactId can be defined here
-                description 'SDK to facilitate Java integrations with the Stark Bank API'
-                url 'https://github.com/starkbank/sdk-java'
+                description 'Pure Java ECDSA library by Stark Bank'
+                url 'https://github.com/starkbank/ecdsa-java'
 
                 scm {
-                    connection 'scm:git:git://github.com/starkbank/sdk-java.git'
-                    developerConnection 'scm:git:ssh://github.com/starkbank/sdk-java.git'
-                    url 'https://github.com/starkbank/sdk-java/'
+                    connection 'scm:git:git://github.com/starkbank/ecdsa-java.git'
+                    developerConnection 'scm:git:ssh://github.com/starkbank/ecdsa-java.git'
+                    url 'https://github.com/starkbank/ecdsa-java/'
                 }
 
                 licenses {

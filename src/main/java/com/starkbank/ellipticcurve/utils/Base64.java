@@ -1112,6 +1112,7 @@ public class Base64
      *
      * @param source The Base64 encoded data
      * @return decoded data
+     * @throws java.io.IOException java.io.IOException
      * @since 2.3.1
      */
     public static byte[] decode( byte[] source )

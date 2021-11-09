@@ -72,8 +72,11 @@ public class Ecdsa {
         BigInteger w = Math.inv(s, curve.N);
         Point u1 =Math.multiply(curve.G, numberMessage.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);
         Point u2 = Math.multiply(publicKey.point, r.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);
-        Point point = Math.add(u1, u2, curve.A, curve.P);
-        return r.compareTo(point.x) == 0;
+        Point v = Math.add(u1, u2, curve.A, curve.P);
+        if (v.isAtInfinity()) {
+            return false;
+        }
+        return v.x.mod(curve.N).equals(r);
     }
 
     /**

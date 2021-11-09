@@ -94,7 +94,7 @@ public final class Math {
      * @return the result point doubled in elliptic curves
      */
     public static Point jacobianDouble(Point p, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.compareTo(BigInteger.ZERO) == 0) {
+        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
             return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
         }
         BigInteger ysq = p.y.pow(2).mod(P);
@@ -116,10 +116,10 @@ public final class Math {
      * @return Point that represents the sum of First and Second Point
      */
     public static Point jacobianAdd(Point p, Point q, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.compareTo(BigInteger.ZERO) == 0) {
+        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
             return q;
         }
-        if (q.y == null || q.y.compareTo(BigInteger.ZERO) == 0) {
+        if (q.y == null || q.y.equals(BigInteger.ZERO)) {
             return p;
         }
         BigInteger U1 = p.x.multiply(q.z.pow(2)).mod(P);

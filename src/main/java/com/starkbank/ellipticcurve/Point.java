@@ -30,4 +30,8 @@ public class Point {
         this.y = y;
         this.z = z;
     }
+
+    public boolean isAtInfinity() {
+        return this.y.equals(BigInteger.ZERO);
+    }
 }

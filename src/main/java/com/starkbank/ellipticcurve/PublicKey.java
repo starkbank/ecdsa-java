@@ -1,16 +1,21 @@
 package com.starkbank.ellipticcurve;
-import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.Der;
-import com.starkbank.ellipticcurve.utils.BinaryAscii;
-import java.util.Arrays;
+import com.starkbank.ellipticcurve.utils.Pem;
+import com.starkbank.ellipticcurve.utils.Der.DerFieldType;
+import com.starkbank.ellipticcurve.utils.Binary;
 import static com.starkbank.ellipticcurve.Curve.secp256k1;
-import static com.starkbank.ellipticcurve.Curve.supportedCurves;
+import java.math.BigInteger;
+import java.util.Arrays;
 
 
 public class PublicKey {
 
     public Point point;
     public Curve curve;
+    private static final String pemTemplate = "-----BEGIN PUBLIC KEY-----\n%s-----END PUBLIC KEY-----";
+    private static final long[] ecdsaPublicKeyOid = {1, 2, 840, 10045, 2, 1};
+    private static final String evenTag = "02";
+    private static final String oddTag = "03";
 
     /**
      *
@@ -24,35 +29,51 @@ public class PublicKey {
 
     /**
      *
-     * @return ByteString
+     * @return String
      */
-    public ByteString toByteString() {
-        return toByteString(false);
+    public String toString() {
+        return toString(false);
     }
 
     /**
      *
      * @param encoded encoded
-     * @return ByteString
+     * @return string
      */
-    public ByteString toByteString(boolean encoded) {
-        ByteString xStr = BinaryAscii.stringFromNumber(point.x, curve.length());
-        ByteString yStr = BinaryAscii.stringFromNumber(point.y, curve.length());
-        xStr.insert(yStr.getBytes());
+    public String toString(boolean encoded) {
+        int baseLength = 2 * this.curve.length();
+        String xHex = Binary.padLeftZeros(Binary.hexFromInt(this.point.x), baseLength);
+        String yHex = Binary.padLeftZeros(Binary.hexFromInt(this.point.y), baseLength);
+        String string = xHex + yHex;
         if(encoded) {
-            xStr.insert(0, new byte[]{0, 4} );
+            return "0004" + string;
         }
-        return xStr;
+        return string;
+    }
+
+    public String toCompressed() {
+        int baseLength = 2 * this.curve.length();
+        String parityTag = oddTag;
+        if (point.y.mod(BigInteger.valueOf(2)).equals(BigInteger.ZERO)) {
+            parityTag = evenTag;
+        }
+        String xHex = Binary.padLeftZeros(Binary.hexFromInt(point.x), baseLength);
+        return parityTag + xHex;
     }
 
     /**
      *
-     * @return ByteString
+     * @return string
      */
-    public ByteString toDer() {
-        long[] oidEcPublicKey = new long[]{1, 2, 840, 10045, 2, 1};
-        ByteString encodeEcAndOid = Der.encodeSequence(Der.encodeOid(oidEcPublicKey), Der.encodeOid(curve.oid));
-        return Der.encodeSequence(encodeEcAndOid, Der.encodeBitString(this.toByteString(true)));
+    public byte[] toDer() {
+        String hexadecimal = Der.encodeConstructed(
+            Der.encodeConstructed(
+                Der.encodePrimitive(DerFieldType.Object, ecdsaPublicKeyOid),
+                Der.encodePrimitive(DerFieldType.Object, this.curve.oid)
+            ),    
+            Der.encodePrimitive(DerFieldType.BitString, this.toString(true))
+        );
+        return Binary.byteFromHex(hexadecimal);
     }
 
     /**
@@ -60,113 +81,79 @@ public class PublicKey {
      * @return String
      */
     public String toPem() {
-        return Der.toPem(this.toDer(), "PUBLIC KEY");
+        byte[] der = this.toDer();
+        return Pem.createPem(Binary.base64FromByte(der), pemTemplate);
     }
 
-    /**
-     *
-     * @param string string
-     * @return PublicKey
-     */
-    public static PublicKey fromPem(String string) {
-        return PublicKey.fromDer(Der.fromPem(string));
+    public static PublicKey fromPem(String string) throws Exception{
+        String publicKeyPem = Pem.getPemContent(string, pemTemplate);
+        return fromDer(Binary.byteFromBase64(publicKeyPem));
     }
 
-    /**
-     *
-     * @param string byteString
-     * @return PublicKey
-     */
-    public static PublicKey fromDer(ByteString string) {
-        ByteString[] str = Der.removeSequence(string);
-        ByteString s1 = str[0];
-        ByteString empty = str[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after DER pubkey: %s", BinaryAscii.hexFromBinary(empty)));
-        }
-        str = Der.removeSequence(s1);
-        ByteString s2 = str[0];
-        ByteString pointStrBitstring = str[1];
-        Object[] o = Der.removeObject(s2);
-        ByteString rest = (ByteString) o[1];
-        o = Der.removeObject(rest);
-        long[] oidCurve = (long[]) o[0];
-        empty = (ByteString) o[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after DER pubkey objects: %s", BinaryAscii.hexFromBinary(empty)));
-        }
+    public static PublicKey fromDer(byte[] der) throws Exception{
+        String hexadecimal = Binary.hexFromByte(der);
+        Object[] parsed = (Object[]) Der.parse(hexadecimal)[0];
+        Object[] curveData = (Object[]) parsed[0];
+        String pointString = parsed[1].toString();
+        long[] publicKeyOid = Binary.longFromString(curveData[0].toString());
+        Object[] curveOidObject = (Object[]) curveData[1];
+        long[] curveOid = Binary.longFromString(curveOidObject[0].toString());
 
-        Curve curve = (Curve) Curve.curvesByOid.get(Arrays.hashCode(oidCurve));
-        if (curve == null) {
-            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s", Arrays.toString(oidCurve), Arrays.toString(supportedCurves.toArray())));
+        if(!Arrays.equals(publicKeyOid, ecdsaPublicKeyOid)) {
+            throw new Exception("The Public Key Object Identifier (OID) should be " + Arrays.toString(ecdsaPublicKeyOid) + ", but " + Arrays.toString(publicKeyOid) + " was found instead");
         }
-
-        str = Der.removeBitString(pointStrBitstring);
-        ByteString pointStr = str[0];
-        empty = str[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException (String.format("trailing junk after pubkey pointstring: %s", BinaryAscii.hexFromBinary(empty)));
-        }
-        return PublicKey.fromString(pointStr.substring(2), curve);
+        Curve curve = Curve.getByOid(curveOid);
+        return fromString((String) pointString, curve);
     }
 
-    /**
-     *
-     * @param string byteString
-     * @param curve curve
-     * @param validatePoint validatePoint
-     * @return PublicKey
-     */
-    public static PublicKey fromString(ByteString string, Curve curve, boolean validatePoint) {
-        int baselen = curve.length();
+    public static PublicKey fromString(String string) {
+        return fromString(string, secp256k1);
+    }
 
-        ByteString xs = string.substring(0, baselen);
-        ByteString ys = string.substring(baselen);
+    public static PublicKey fromString(String string, Curve curve){
+        return fromString(string, curve, false);
+    }
 
-        Point p = new Point(BinaryAscii.numberFromString(xs.getBytes()), BinaryAscii.numberFromString(ys.getBytes()));
+    public static PublicKey fromString(String string, Curve curve, Boolean ValidatePoint) {
+        int baseLength = 2 * curve.length();
+        if (string.length() > 2 * baseLength && string.substring(0, 4).equals("0004")) {
+            string = string.substring(4);
+        }
+
+        String xs = string.substring(0, baseLength);
+        String ys = string.substring(baseLength);
+
+        Point p = new Point(
+            Binary.intFromHex(xs),
+            Binary.intFromHex(ys)
+        );
 
         PublicKey publicKey = new PublicKey(p, curve);
-        if (!validatePoint) {
+        if (!ValidatePoint) {
             return publicKey;
         }
-        if (p.isAtInfinity()) {
+        if(p.isAtInfinity()){
             throw new RuntimeException("Public Key point is at infinity");
         }
         if (!curve.contains(p)) {
-            throw new RuntimeException(String.format("Point (%s,%s) is not valid for curve %s", p.x, p.y, curve.name));
+            throw new RuntimeException("Point (" + p.x + "," + p.y + " is not valid for curve " + curve.name);
         }
-        if (!Math.multiply(p, curve.N, curve.N, curve.A, curve.P).isAtInfinity()) {
-            throw new RuntimeException(String.format("Point (%s,%s) * %s.N is not at infinity", p.x, p.y, curve.name));
+        if(!Math.multiply(p, curve.N, curve.N, curve.A, curve.P).isAtInfinity()){
+            throw new RuntimeException("Point (" + p.x + "," + p.y + ") * " + curve.name + ".N is not infinity");
         }
         return publicKey;
     }
 
-    /**
-     *
-     * @param string byteString
-     * @param curve curve
-     * @return PublicKey
-     */
-    public static PublicKey fromString(ByteString string, Curve curve) {
-        return fromString(string, curve, true);
+    public static PublicKey fromCompressed(String string) {
+        return fromCompressed(string, secp256k1);
     }
 
-    /**
-     *
-     * @param string byteString
-     * @param validatePoint validatePoint
-     * @return PublicKey
-     */
-    public static PublicKey fromString(ByteString string, boolean validatePoint) {
-        return fromString(string, secp256k1, validatePoint);
-    }
-
-    /**
-     *
-     * @param string byteString
-     * @return PublicKey
-     */
-    public static PublicKey fromString(ByteString string) {
-        return fromString(string, true);
+    public static PublicKey fromCompressed(String string, Curve curve) {
+        String parityTag = string.substring(0, 2);
+        String xHex = string.substring(2);
+        BigInteger x = Binary.intFromHex(xHex);
+        BigInteger y = curve.y(x, parityTag.equals(evenTag));
+        Point p = new Point(x, y);
+        return new PublicKey(p, curve);
     }
 }

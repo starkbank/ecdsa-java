@@ -4,6 +4,10 @@ import java.math.BigInteger;
 
 public final class Math {
 
+    public static BigInteger modularSquareRoot(BigInteger value, BigInteger prime) {
+        return value.modPow((prime.add(BigInteger.ONE).divide(BigInteger.valueOf(4))), prime);
+    }
+
     /**
      * Fast way to multiply point and scalar in elliptic curves
      *
@@ -27,7 +31,6 @@ public final class Math {
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
-
     public static Point add(Point p, Point q, BigInteger A, BigInteger P) {
         return fromJacobian(jacobianAdd(toJacobian(p), toJacobian(q), A, P), P);
     }
@@ -63,18 +66,17 @@ public final class Math {
     /**
      * Convert point to Jacobian coordinates
      *
-     * @param p the point you want to transform
+     * @param p First Point you want to add
      * @return Point in Jacobian coordinates
      */
     public static Point toJacobian(Point p) {
-
         return new Point(p.x, p.y, BigInteger.ONE);
     }
 
     /**
      * Convert point back from Jacobian coordinates
      *
-     * @param p the point you want to transform
+     * @param p First Point you want to add
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point in default coordinates
      */

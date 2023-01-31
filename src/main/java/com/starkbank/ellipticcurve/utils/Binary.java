@@ -42,7 +42,7 @@ public class Binary {
 
     static public byte[] byteFromHex(String hexadecimal) {
         int hexLength = hexadecimal.length();
-        if(hexLength % 2 != 0) {
+        if (hexLength % 2 != 0) {
             throw new IllegalArgumentException("Hexadecimal string must have an even number of characters");
         }
 

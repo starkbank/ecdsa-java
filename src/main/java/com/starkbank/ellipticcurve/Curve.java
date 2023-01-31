@@ -102,7 +102,7 @@ public class Curve {
         for (int i = 0; i < names.length; i++) {
             names[i] = ((Curve) curvesByOid.values().toArray()[i]).name;
         }
-        if(!curvesByOid.containsKey(Arrays.hashCode(oid))) {
+        if (!curvesByOid.containsKey(Arrays.hashCode(oid))) {
             throw new Error("Unknown curve with oid " + Arrays.toString(oid) + "; The following are registered: " + Arrays.toString(names));
         }
         return (Curve) curvesByOid.get(Arrays.hashCode(oid));

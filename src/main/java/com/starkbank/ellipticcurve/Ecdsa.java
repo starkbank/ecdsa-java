@@ -30,7 +30,7 @@ public class Ecdsa {
             s = ((numberMessage.add(r.multiply(privateKey.secret))).multiply(Math.inv(randNum, curve.N))).mod(curve.N);
         }
         BigInteger recoveryId = randomSignPoint.y.and(BigInteger.ONE);
-        if(randomSignPoint.y.compareTo(curve.N) > 0){
+        if (randomSignPoint.y.compareTo(curve.N) > 0){
             recoveryId = recoveryId.add(BigInteger.valueOf(2));
         }
 
@@ -66,13 +66,13 @@ public class Ecdsa {
         BigInteger r = signature.r;
         BigInteger s = signature.s;
 
-        if (r.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+        if (r.compareTo(BigInteger.ONE) < 0) {
             return false;
         }
         if (r.compareTo(curve.N) >= 0) {
             return false;
         }
-        if (s.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+        if (s.compareTo(BigInteger.ONE) < 0) {
             return false;
         }
         if (s.compareTo(curve.N) >= 0) {

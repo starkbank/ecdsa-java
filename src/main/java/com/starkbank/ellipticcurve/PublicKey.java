@@ -45,7 +45,7 @@ public class PublicKey {
         String xHex = Binary.padLeftZeros(Binary.hexFromInt(this.point.x), baseLength);
         String yHex = Binary.padLeftZeros(Binary.hexFromInt(this.point.y), baseLength);
         String string = xHex + yHex;
-        if(encoded) {
+        if (encoded) {
             return "0004" + string;
         }
         return string;
@@ -99,7 +99,7 @@ public class PublicKey {
         Object[] curveOidObject = (Object[]) curveData[1];
         long[] curveOid = Binary.longFromString(curveOidObject[0].toString());
 
-        if(!Arrays.equals(publicKeyOid, ecdsaPublicKeyOid)) {
+        if (!Arrays.equals(publicKeyOid, ecdsaPublicKeyOid)) {
             throw new Exception("The Public Key Object Identifier (OID) should be " + Arrays.toString(ecdsaPublicKeyOid) + ", but " + Arrays.toString(publicKeyOid) + " was found instead");
         }
         Curve curve = Curve.getByOid(curveOid);
@@ -132,13 +132,13 @@ public class PublicKey {
         if (!ValidatePoint) {
             return publicKey;
         }
-        if(p.isAtInfinity()){
+        if (p.isAtInfinity()){
             throw new RuntimeException("Public Key point is at infinity");
         }
         if (!curve.contains(p)) {
             throw new RuntimeException("Point (" + p.x + "," + p.y + " is not valid for curve " + curve.name);
         }
-        if(!Math.multiply(p, curve.N, curve.N, curve.A, curve.P).isAtInfinity()){
+        if (!Math.multiply(p, curve.N, curve.N, curve.A, curve.P).isAtInfinity()){
             throw new RuntimeException("Point (" + p.x + "," + p.y + ") * " + curve.name + ".N is not infinity");
         }
         return publicKey;

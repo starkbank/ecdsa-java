@@ -30,7 +30,7 @@ public class Signature {
     public byte[] toDer(Boolean withRecoveryId) {
         String hexadecimal = this._toString();
         byte[] encodedSequence = Binary.byteFromHex(hexadecimal);
-        if(!withRecoveryId) return encodedSequence;
+        if (!withRecoveryId) return encodedSequence;
 
         byte[] finalEncodedSequence = new byte[encodedSequence.length + 1];
         finalEncodedSequence[0] = (byte) (27 + this.recoveryId.intValue());
@@ -61,7 +61,7 @@ public class Signature {
         }
 
         String hexadecimal = Binary.hexFromByte(der);
-        return Signature._fromString(hexadecimal, recoveryId);
+        return Signature.fromString(hexadecimal, recoveryId);
     }
 
     public static Signature fromDer(byte[] der) throws Exception {
@@ -84,16 +84,11 @@ public class Signature {
         );
     }
 
-    public static Signature _fromString(String string, BigInteger recoveryId) throws Exception {
+    private static Signature fromString(String string, BigInteger recoveryId) throws Exception {
         Object[] parsed = (Object[]) Der.parse(string)[0];
         BigInteger r = new BigInteger(parsed[0].toString());
         Object[] parsedS = (Object[]) parsed[1];
         BigInteger s = new BigInteger(parsedS[0].toString());
         return new Signature(r, s, recoveryId);
     }
-
-    public static Signature _fromString(String string) throws Exception {
-        return Signature._fromString(string, null);
-    }
-
 }

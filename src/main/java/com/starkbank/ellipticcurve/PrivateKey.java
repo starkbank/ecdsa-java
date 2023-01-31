@@ -21,10 +21,18 @@ public class PrivateKey {
         secret = RandomInteger.between(BigInteger.ONE, curve.N.subtract(BigInteger.ONE));
     }
     
+    /**
+     *
+     * @param curve curve
+     */
     public PrivateKey(Curve curve) {
         this(curve, RandomInteger.between(BigInteger.ONE, curve.N.subtract(BigInteger.ONE)));
     }
 
+    /**
+     *
+     * @param secret secret
+     */
     public PrivateKey(BigInteger secret) {
         this(Curve.secp256k1, secret);
     }
@@ -78,22 +86,29 @@ public class PrivateKey {
     public static PrivateKey fromDer(byte[] der) throws Exception {
         String hexadecimal = Binary.hexFromByte(der);
         Object[] parsed = (Object[]) Der.parse(hexadecimal)[0];
+
         int privateKeyFlag = Integer.parseInt(parsed[0].toString());
         Object[] parsedObject = (Object[]) parsed[1];
+
         String secretHex = parsedObject[0].toString();
         Object[] parsedObject1 = (Object[]) parsedObject[1];
+
         Object[] curveDataObject = (Object[]) parsedObject1[0];
         long[] curveData = Binary.longFromString(curveDataObject[0].toString());
+        
         Object[] publicKeyStringObject = (Object[]) parsedObject1[1];
         String publicKeyString = publicKeyStringObject[0].toString().toLowerCase();
-        if(privateKeyFlag != 1){
+
+        if (privateKeyFlag != 1){
             throw new Exception("Private keys should start with a '1' flag, but a " + privateKeyFlag + " was found instead");
         }
+
         Curve curve = Curve.getByOid(curveData);
         PrivateKey privateKey = PrivateKey.fromString(secretHex, curve);
-        if(!privateKey.publicKey().toString(true).equals(publicKeyString)){
+        if (!privateKey.publicKey().toString(true).equals(publicKeyString)){
             throw new Exception("The public key described inside the private key file doesn't match the actual public key of the pair");
         }
+
         return privateKey;
     }
 

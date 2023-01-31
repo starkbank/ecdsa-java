@@ -61,27 +61,27 @@ public class Der {
     }
 
     static public String encodePrimitive(String tagType, Object value) {
-        if(Objects.equals(tagType, DerFieldType.Integer)) value = encodeInteger(new BigInteger((String) value));
-        if(Objects.equals(tagType, DerFieldType.Object)) value = Oid.oidToHex((long []) value);
+        if (Objects.equals(tagType, DerFieldType.Integer)) value = encodeInteger(new BigInteger((String) value));
+        if (Objects.equals(tagType, DerFieldType.Object)) value = Oid.oidToHex((long []) value);
         
         return "" + typeToHexTag.get(tagType) + generateLengthBytes((String) value) + value;
     }
 
     static private String encodeInteger(BigInteger number) {
         String hexadecimal = Binary.hexFromInt(number.abs());
-        if(number.signum() == -1) {
+        if (number.signum() == -1) {
             int bitCount = 4 * hexadecimal.length();
             BigInteger twosComplement = number.add(BigInteger.valueOf((long) Math.pow(2, bitCount)));
             return Binary.hexFromInt(twosComplement);
         }
         char firstChar = hexadecimal.charAt(0);
         String bits = Binary.bitsFromHex(String.valueOf(firstChar));
-        if(bits.charAt(0) == '1') hexadecimal = "00" + hexadecimal;
+        if (bits.charAt(0) == '1') hexadecimal = "00" + hexadecimal;
         return hexadecimal;
     }
 
     static public Object[] parse(String hexadecimal) throws Exception {
-        if(Objects.equals(hexadecimal, "")) return new Object[]{};
+        if (Objects.equals(hexadecimal, "")) return new Object[]{};
         String typeByte = hexadecimal.substring(0, 2);
         hexadecimal = hexadecimal.substring(2);
 
@@ -91,14 +91,14 @@ public class Der {
 
         String content = hexadecimal.substring(lengthBytes, lengthBytes + length);
         hexadecimal = hexadecimal.substring(lengthBytes + length);
-        if(content.length() < length) throw new Exception("missing bytes in DER parse");
+        if (content.length() < length) throw new Exception("missing bytes in DER parse");
 
         HashMap<String, Object> tagData = getTagData(typeByte);
         
-        if(tagData.get("isConstructed").equals(true)) {
+        if (tagData.get("isConstructed").equals(true)) {
             
             Object[] nextContent = parse(hexadecimal);
-            if(nextContent.length == 0) {
+            if (nextContent.length == 0) {
                 return new Object[]{ parse(content) };
             }
             return new Object[]{ parse(content), nextContent[0] };
@@ -126,7 +126,7 @@ public class Der {
                 break;
         }
 
-        if(hexadecimal.length() != 0) contentArray.add(parse(hexadecimal));
+        if (hexadecimal.length() != 0) contentArray.add(parse(hexadecimal));
 
         return contentArray.toArray();
     }
@@ -160,7 +160,7 @@ public class Der {
     static private BigInteger parseInteger(String hexadecimal) {
         BigInteger integer = Binary.intFromHex(hexadecimal);
         String bits = Binary.bitsFromHex(hexadecimal.charAt(0));
-        if(bits.charAt(0) == '0') return integer;
+        if (bits.charAt(0) == '0') return integer;
         int bitCount = 4 * hexadecimal.length();
         return integer.subtract(BigInteger.valueOf((long) Math.pow(2, bitCount)));
     }
@@ -169,12 +169,12 @@ public class Der {
         int lengthBytes = 2;
         int lengthIndicator = Binary.intFromHex(hexadecimal.substring(0, lengthBytes)).intValue();
         boolean isShortForm = lengthIndicator < 128;
-        if(isShortForm) {
+        if (isShortForm) {
             int length = 2 * lengthIndicator;
             return new int[] {length, lengthBytes};
         }
         int lengthLength = lengthIndicator - 128;
-        if(lengthLength == 0) throw new Exception("indefinite length encoding located in DER");
+        if (lengthLength == 0) throw new Exception("indefinite length encoding located in DER");
         lengthBytes += 2 * lengthLength;
         int length = Binary.intFromHex(hexadecimal.substring(2, lengthBytes)).intValue() * 2;
         return new int[] {length, lengthBytes};
@@ -183,7 +183,7 @@ public class Der {
     static private String generateLengthBytes(String hexadecimal) {
         BigInteger size = BigInteger.valueOf(hexadecimal.length()).divide(BigInteger.valueOf(2));
         String length = Binary.hexFromInt(size);
-        if(size.compareTo(BigInteger.valueOf(128)) < 0) return Binary.padLeftZeros(length, 2);
+        if (size.compareTo(BigInteger.valueOf(128)) < 0) return Binary.padLeftZeros(length, 2);
         BigInteger lengthLength = BigInteger.valueOf(length.length()).divide(BigInteger.valueOf(2)).add(BigInteger.valueOf(128));
         return Binary.hexFromInt(lengthLength) + length;
     }

@@ -13,6 +13,8 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 
 ## [Unreleased]
+### Changed
+- internal structure to suit starkbank's pattern
 
 ### Fixed
 - groupId in pom.xml

@@ -45,8 +45,6 @@ public class File {
         {
             e.printStackTrace();
         }
-
         return content;
     }
-
 }

@@ -1,11 +1,11 @@
 package com.starkbank.ellipticcurve.utils;
-
-import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-
-import static com.starkbank.ellipticcurve.utils.BinaryAscii.*;
+import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.util.*;
 
 
 public class Der {
@@ -14,340 +14,203 @@ public class Der {
         throw new UnsupportedOperationException("Der is a utility class and cannot be instantiated");
     }
 
-    /**
-     *
-     * @param encodedPieces encodedPieces
-     * @return ByteString
-     */
-    public static ByteString encodeSequence(ByteString... encodedPieces) {
-        int totalLen = 0;
-        ByteString stringPieces = new ByteString(toBytes(0x30));
-        for (ByteString p : encodedPieces) {
-            totalLen += p.length();
-            stringPieces.insert(p.getBytes());
-        }
-        stringPieces.insert(1, encodeLength(totalLen).getBytes());
-        return stringPieces;
+    static public final class DerFieldType {
+        static final public String Integer = "integer";
+        static final public String BitString = "bitString";
+        static final public String OctetString = "octetString";
+        static final public String Null = "null";
+        static final public String Object = "object";
+        static final public String PrintableString = "printableString";
+        static final public String UtcTime = "utcTime";
+        static final public String Sequence = "sequence";
+        static final public String Set = "set";
+        static final public String OidContainer = "oidContainer";
+        static final public String PublicKeyPointContainer = "publicKeyPointContainer";
     }
 
-    /**
-     *
-     * @param length length
-     * @return ByteString
-     */
-    public static ByteString encodeLength(int length) {
-        assert length >= 0;
-        if (length < 0x80) {
-            return new ByteString(toBytes(length));
+    static private final HashMap<String, String> hexTagToType = new HashMap<String, String>() {
+        {
+            put("02", DerFieldType.Integer);
+            put("03", DerFieldType.BitString);
+            put("04", DerFieldType.OctetString);
+            put("05", DerFieldType.Null);
+            put("06", DerFieldType.Object);
+            put("13", DerFieldType.PrintableString);
+            put("17", DerFieldType.UtcTime);
+            put("30", DerFieldType.Sequence);
+            put("31", DerFieldType.Set);
+            put("a0", DerFieldType.OidContainer);
+            put("a1", DerFieldType.PublicKeyPointContainer);
         }
-        String hexString = String.format("%x", length);
-        if (hexString.length() % 2 != 0) {
-            hexString = "0" + hexString;
-        }
-        ByteString s = new ByteString(binaryFromHex(hexString));
-        s.insert(0, toBytes((0x80 | s.length())));
-        return s;
+    };
 
-    }
-
-    /**
-     *
-     * @param r r
-     * @return ByteString
-     */
-    public static ByteString encodeInteger(BigInteger r) {
-        assert r.compareTo(BigInteger.ZERO) >= 0;
-        String h = String.format("%x", r);
-        if (h.length() % 2 != 0) {
-            h = "0" + h;
-        }
-        ByteString s = new ByteString(binaryFromHex(h));
-        short num = s.getShort(0);
-        if (num <= 0x7F) {
-            s.insert(0, toBytes(s.length()));
-            s.insert(0, toBytes(0x02));
-            return s;
-        }
-        int length = s.length();
-        s.insert(0, toBytes(0x00));
-        s.insert(0, toBytes((length + 1)));
-        s.insert(0, toBytes(0x02));
-        return s;
-    }
-
-    /**
-     *
-     * @param n n
-     * @return ByteString
-     */
-    public static ByteString encodeNumber(long n) {
-        ByteString b128Digits = new ByteString();
-        while (n != 0) {
-            b128Digits.insert(0, toBytes((int) (n & 0x7f) | 0x80));
-            n = n >> 7;
-        }
-        if (b128Digits.isEmpty()) {
-            b128Digits.insert(toBytes(0));
-        }
-        int lastIndex = b128Digits.length() - 1;
-        b128Digits.replace(lastIndex, (byte) (b128Digits.getShort(lastIndex) & 0x7f));
-        return b128Digits;
-    }
-
-    /**
-     *
-     * @param pieces pieces
-     * @return ByteString
-     */
-    public static ByteString encodeOid(long... pieces) {
-        long first = pieces[0];
-        long second = pieces[1];
-        assert first <= 2;
-        assert second <= 39;
-        ByteString body = new ByteString();
-        for (int i = 2; i < pieces.length; i++) {
-            body.insert(encodeNumber(pieces[i]).getBytes());
-        }
-        body.insert(0, toBytes((int) (40 * first + second)));
-        body.insert(0, encodeLength(body.length()).getBytes());
-        body.insert(0, toBytes(0x06));
-        return body;
-    }
-
-    /**
-     *
-     * @param s s
-     * @return ByteString
-     */
-    public static ByteString encodeBitString(ByteString s) {
-        s.insert(0, encodeLength(s.length()).getBytes());
-        s.insert(0, toBytes(0x03));
-        return s;
-    }
-
-    /**
-     *
-     * @param s s
-     * @return ByteString
-     */
-    public static ByteString encodeOctetString(ByteString s) {
-        s.insert(0, encodeLength(s.length()).getBytes());
-        s.insert(0, toBytes(0x04));
-        return s;
-    }
-
-    /**
-     *
-     * @param tag tag
-     * @param value value
-     * @return ByteString
-     */
-    public static ByteString encodeConstructed(long tag, ByteString value) {
-        value.insert(0, encodeLength(value.length()).getBytes());
-        value.insert(0, toBytes((int) (0xa0 + tag)));
-        return value;
-    }
-
-    /**
-     *
-     * @param string string
-     * @return int[]
-     */
-    public static int[] readLength(ByteString string) {
-        short num = string.getShort(0);
-        if ((num & 0x80) == 0) {
-            return new int[]{num & 0x7f, 1};
-        }
-
-        int llen = num & 0x7f;
-        if (llen > string.length() - 1) {
-            throw new RuntimeException("ran out of length bytes");
-        }
-        return new int[]{Integer.valueOf(hexFromBinary(string.substring(1, 1 + llen)), 16), 1 + llen};
-    }
-
-    /**
-     *
-     * @param string string
-     * @return int[]
-     */
-    public static int[] readNumber(ByteString string) {
-        int number = 0;
-        int llen = 0;
-        for (; ; ) {
-            if (llen > string.length()) {
-                throw new RuntimeException("ran out of length bytes");
+    static private final HashMap<String, String> typeToHexTag = new HashMap<String, String>() {
+        {
+            for (String key : hexTagToType.keySet()) {
+                put(hexTagToType.get(key), key);
             }
-            number = number << 7;
-            short d = string.getShort(llen);
-            number += (d & 0x7f);
-            llen += 1;
-            if ((d & 0x80) == 0)
+        }
+    };
+
+    static public String encodeConstructed(String... encodedValues) {
+        StringBuilder stringPieces = new StringBuilder("");
+        for (String p : encodedValues) {
+            stringPieces.append(p);
+        }
+        return encodePrimitive(DerFieldType.Sequence, stringPieces.toString());
+    }
+
+    static public String encodePrimitive(String tagType, Object value) {
+        if (Objects.equals(tagType, DerFieldType.Integer)) value = encodeInteger(new BigInteger((String) value));
+        if (Objects.equals(tagType, DerFieldType.Object)) value = Oid.oidToHex((long []) value);
+        
+        return "" + typeToHexTag.get(tagType) + generateLengthBytes((String) value) + value;
+    }
+
+    static private String encodeInteger(BigInteger number) {
+        String hexadecimal = Binary.hexFromInt(number.abs());
+        if (number.signum() == -1) {
+            int bitCount = 4 * hexadecimal.length();
+            BigInteger twosComplement = number.add(BigInteger.valueOf((long) Math.pow(2, bitCount)));
+            return Binary.hexFromInt(twosComplement);
+        }
+        char firstChar = hexadecimal.charAt(0);
+        String bits = Binary.bitsFromHex(String.valueOf(firstChar));
+        if (bits.charAt(0) == '1') hexadecimal = "00" + hexadecimal;
+        return hexadecimal;
+    }
+
+    static public Object[] parse(String hexadecimal) throws Exception {
+        if (Objects.equals(hexadecimal, "")) return new Object[]{};
+        String typeByte = hexadecimal.substring(0, 2);
+        hexadecimal = hexadecimal.substring(2);
+
+        int[] lengthArray = readLengthBytes(hexadecimal);
+        int length = lengthArray[0];
+        int lengthBytes = lengthArray[1];
+
+        String content = hexadecimal.substring(lengthBytes, lengthBytes + length);
+        hexadecimal = hexadecimal.substring(lengthBytes + length);
+        if (content.length() < length) throw new Exception("missing bytes in DER parse");
+
+        HashMap<String, Object> tagData = getTagData(typeByte);
+        
+        if (tagData.get("isConstructed").equals(true)) {
+            
+            Object[] nextContent = parse(hexadecimal);
+            if (nextContent.length == 0) {
+                return new Object[]{ parse(content) };
+            }
+            return new Object[]{ parse(content), nextContent[0] };
+        }
+        
+        List<Object> contentArray = new ArrayList<Object>();
+        switch((String) tagData.get("type")) {
+            case DerFieldType.Null:
+                contentArray.add(parseNull(content));
+                break;
+            case DerFieldType.Object:
+                contentArray.add(parseOid(content));
+                break;
+            case DerFieldType.UtcTime:
+                contentArray.add(parseTime(content));
+                break;
+            case DerFieldType.Integer:
+                contentArray.add(parseInteger(content));
+                break;
+            case DerFieldType.PrintableString:
+                contentArray.add(parseString(content));
+                break;
+            default:
+                contentArray.add(parseAny(content));
                 break;
         }
-        return new int[]{number, llen};
+
+        if (hexadecimal.length() != 0) contentArray.add(parse(hexadecimal));
+
+        return contentArray.toArray();
     }
 
-    /**
-     *
-     * @param string string
-     * @return ByteString[]
-     */
-    public static ByteString[] removeSequence(ByteString string) {
-        short n = string.getShort(0);
-        if (n != 0x30) {
-            throw new RuntimeException(String.format("wanted sequence (0x30), got 0x%02x", n));
-        }
-        int[] l = readLength(string.substring(1));
-        long endseq = 1 + l[0] + l[1];
-        return new ByteString[]{string.substring(1 + l[1], (int) endseq), string.substring((int) endseq)};
+    static private String parseAny(String hexadecimal) {
+        return hexadecimal;
     }
 
-    /**
-     *
-     * @param string string
-     * @return Object[]
-     */
-    public static Object[] removeInteger(ByteString string) {
-        short n = string.getShort(0);
-        if (n != 0x02) {
-            throw new RuntimeException(String.format("wanted integer (0x02), got 0x%02x", n));
-        }
-        int[] l = readLength(string.substring(1));
-        int length = l[0];
-        int llen = l[1];
-        ByteString numberbytes = string.substring(1 + llen, 1 + llen + length);
-        ByteString rest = string.substring(1 + llen + length);
-        short nbytes = numberbytes.getShort(0);
-        assert nbytes < 0x80;
-        return new Object[]{new BigInteger(hexFromBinary(numberbytes), 16), rest};
+    static private List<Integer> parseOid(String hexadecimal) {
+        return Oid.oidFromHex(hexadecimal);
+    }
+    
+    static public String parseTime(String hexadecimal) throws ParseException {
+        String string = parseString(hexadecimal);
+        DateFormat format = new SimpleDateFormat("yyMMddHHmmss");
+        TimeZone tz = TimeZone.getTimeZone(ZoneId.of(string.substring(string.length() - 1)));
+        format.setTimeZone(tz);
+        Date parsed = format.parse(string);
+        return parsed.toInstant().toString();
+    }
+    
+    static private String parseString(String hexadecimal) {
+        byte[] bytes = Binary.byteFromHex(hexadecimal);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    /**
-     *
-     * @param string string
-     * @return Object[]
-     */
-    public static Object[] removeObject(ByteString string) {
-        int n = string.getShort(0);
-        if (n != 0x06) {
-            throw new RuntimeException(String.format("wanted object (0x06), got 0x%02x", n));
-        }
-        int[] l = readLength(string.substring(1));
-        int length = l[0];
-        int lengthlength = l[1];
-        ByteString body = string.substring(1 + lengthlength, 1 + lengthlength + length);
-        ByteString rest = string.substring(1 + lengthlength + length);
-        List numbers = new ArrayList();
-        while (!body.isEmpty()) {
-            l = readNumber(body);
-            n = l[0];
-            int ll = l[1];
-            numbers.add(n);
-            body = body.substring(ll);
-        }
-        long n0 = Integer.valueOf(numbers.remove(0).toString());
-        long first = n0 / 40;
-        long second = n0 - (40 * first);
-        numbers.add(0, first);
-        numbers.add(1, second);
-        long[] numbersArray = new long[numbers.size()];
-        for (int i = 0; i < numbers.size(); i++) {
-            numbersArray[i] = Long.valueOf(numbers.get(i).toString());
-        }
-        return new Object[]{numbersArray, rest};
+    static private String parseNull(String hexadecimal) {
+        return null;
     }
 
-    /**
-     *
-     * @param string string
-     * @return ByteString
-     */
-    public static ByteString[] removeBitString(ByteString string) {
-        short n = string.getShort(0);
-        if (n != 0x03) {
-            throw new RuntimeException(String.format("wanted bitstring (0x03), got 0x%02x", n));
+    static private BigInteger parseInteger(String hexadecimal) {
+        BigInteger integer = Binary.intFromHex(hexadecimal);
+        String bits = Binary.bitsFromHex(hexadecimal.charAt(0));
+        if (bits.charAt(0) == '0') return integer;
+        int bitCount = 4 * hexadecimal.length();
+        return integer.subtract(BigInteger.valueOf((long) Math.pow(2, bitCount)));
+    }
+    
+    static private int[] readLengthBytes(String hexadecimal) throws Exception {
+        int lengthBytes = 2;
+        int lengthIndicator = Binary.intFromHex(hexadecimal.substring(0, lengthBytes)).intValue();
+        boolean isShortForm = lengthIndicator < 128;
+        if (isShortForm) {
+            int length = 2 * lengthIndicator;
+            return new int[] {length, lengthBytes};
         }
-        int[] l = readLength(string.substring(1));
-        int length = l[0];
-        int llen = l[1];
-        ByteString body = string.substring(1 + llen, 1 + llen + length);
-        ByteString rest = string.substring(1 + llen + length);
-        return new ByteString[]{body, rest};
+        int lengthLength = lengthIndicator - 128;
+        if (lengthLength == 0) throw new Exception("indefinite length encoding located in DER");
+        lengthBytes += 2 * lengthLength;
+        int length = Binary.intFromHex(hexadecimal.substring(2, lengthBytes)).intValue() * 2;
+        return new int[] {length, lengthBytes};
+    }
+    
+    static private String generateLengthBytes(String hexadecimal) {
+        BigInteger size = BigInteger.valueOf(hexadecimal.length()).divide(BigInteger.valueOf(2));
+        String length = Binary.hexFromInt(size);
+        if (size.compareTo(BigInteger.valueOf(128)) < 0) return Binary.padLeftZeros(length, 2);
+        BigInteger lengthLength = BigInteger.valueOf(length.length()).divide(BigInteger.valueOf(2)).add(BigInteger.valueOf(128));
+        return Binary.hexFromInt(lengthLength) + length;
     }
 
-    /**
-     *
-     * @param string string
-     * @return ByteString[]
-     */
-    public static ByteString[] removeOctetString(ByteString string) {
-        short n = string.getShort(0);
-        if (n != 0x04) {
-            throw new RuntimeException(String.format("wanted octetstring (0x04), got 0x%02x", n));
-        }
-        int[] l = readLength(string.substring(1));
-        int length = l[0];
-        int llen = l[1];
-        ByteString body = string.substring(1 + llen, 1 + llen + length);
-        ByteString rest = string.substring(1 + llen + length);
-        return new ByteString[]{body, rest};
-    }
+    static private HashMap<String, Object> getTagData(String tag) {
+        char[] bits = Binary.bitsFromHex(tag).toCharArray();
+        char bits8 = bits[0];
+        char bits7 = bits[1];
+        char bits6 = bits[2];
 
-    /**
-     *
-     * @param string string
-     * @return Object[]
-     */
-    public static Object[] removeConstructed(ByteString string) {
-        short s0 = string.getShort(0);
-        if ((s0 & 0xe0) != 0xa0) {
-            throw new RuntimeException(String.format("wanted constructed tag (0xa0-0xbf), got 0x%02x", s0));
-        }
-        int tag = s0 & 0x1f;
-        int[] l = readLength(string.substring(1));
-        int length = l[0];
-        int llen = l[1];
-        ByteString body = string.substring(1 + llen, 1 + llen + length);
-        ByteString rest = string.substring(1 + llen + length);
-        return new Object[]{tag, body, rest};
-    }
+        HashMap<String, HashMap<String, String>> tagHashMap = new HashMap<String, HashMap<String, String>>();
+        HashMap<String, String> param0 = new HashMap<String, String>();
+        param0.put("0", "universal");
+        param0.put("1", "application");
+        HashMap<String, String> param1 = new HashMap<String, String>();
+        param1.put("0", "context-specific");
+        param1.put("1", "private");
+        tagHashMap.put("0", param0);
+        tagHashMap.put("1", param1);
+        
+        String tagClass = tagHashMap.get(String.valueOf(bits8)).get(String.valueOf(bits7));
+        Boolean isConstructed = bits6 == '1';
 
-    /**
-     *
-     * @param pem pem
-     * @return ByteString
-     */
-    public static ByteString fromPem(String pem) {
-        String[] pieces = pem.split("\n");
-        StringBuilder d = new StringBuilder();
-        for (String p : pieces) {
-            if (!p.isEmpty() && !p.startsWith("-----")) {
-                d.append(p.trim());
-            }
-        }
-        try {
-            return new ByteString(Base64.decode(d.toString()));
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Corrupted pem string! Could not decode base64 from it");
-        }
-    }
-
-    /**
-     *
-     * @param der der
-     * @param name name
-     * @return String
-     */
-    public static String toPem(ByteString der, String name) {
-        String b64 = Base64.encodeBytes(der.getBytes());
-        StringBuilder lines = new StringBuilder();
-        lines.append(String.format("-----BEGIN %s-----\n", name));
-        for (int start = 0; start < b64.length(); start += 64) {
-            int end = start + 64 > b64.length() ? b64.length() : start + 64;
-            lines.append(String.format("%s\n", b64.substring(start, end)));
-        }
-        lines.append(String.format("-----END %s-----\n", name));
-        return lines.toString();
+        HashMap<String, Object> data = new HashMap<String, Object>();
+        data.put("class", tagClass);
+        data.put("isConstructed", isConstructed);
+        data.put("type", hexTagToType.get(tag));
+        return data;
     }
 }

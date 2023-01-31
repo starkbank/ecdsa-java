@@ -1,79 +1,94 @@
 package com.starkbank.ellipticcurve;
-import com.starkbank.ellipticcurve.utils.Base64;
-import com.starkbank.ellipticcurve.utils.BinaryAscii;
-import com.starkbank.ellipticcurve.utils.ByteString;
+import com.starkbank.ellipticcurve.utils.Binary;
 import com.starkbank.ellipticcurve.utils.Der;
-import java.io.IOException;
+import com.starkbank.ellipticcurve.utils.Der.DerFieldType;
 import java.math.BigInteger;
+import java.util.Arrays;
 
 
 public class Signature {
 
     public BigInteger r;
     public BigInteger s;
+    public BigInteger recoveryId;
 
     /**
      *
      * @param r r
      * @param s s
      */
-    public Signature(BigInteger r, BigInteger s) {
+    public Signature(BigInteger r, BigInteger s, BigInteger recoveryId) {
         this.r = r;
         this.s = s;
+        this.recoveryId = recoveryId;
     }
 
-    /**
-     *
-     * @return ByteString
-     */
-    public ByteString toDer() {
-        return Der.encodeSequence(Der.encodeInteger(r), Der.encodeInteger(s));
+    public Signature(BigInteger r, BigInteger s) {
+        this(r, s, null);
     }
 
-    /**
-     *
-     * @return String
-     */
+    public byte[] toDer(Boolean withRecoveryId) {
+        String hexadecimal = this._toString();
+        byte[] encodedSequence = Binary.byteFromHex(hexadecimal);
+        if (!withRecoveryId) return encodedSequence;
+
+        byte[] finalEncodedSequence = new byte[encodedSequence.length + 1];
+        finalEncodedSequence[0] = (byte) (27 + this.recoveryId.intValue());
+        for (int i = 0; i < encodedSequence.length; i++) {
+            finalEncodedSequence[i + 1] = encodedSequence[i];
+        }
+        return finalEncodedSequence;
+    }
+
+    public byte[] toDer() {
+        return this.toDer(false);
+    }
+
+    public String toBase64(Boolean withRecoveryId) {
+        return Binary.base64FromByte(this.toDer(withRecoveryId));
+    }
+
     public String toBase64() {
-        return Base64.encodeBytes(toDer().getBytes());
+        return this.toBase64(false);
     }
 
-    /**
-     *
-     * @param string byteString
-     * @return Signature
-     */
-    public static Signature fromDer(ByteString string) {
-        ByteString[] str = Der.removeSequence(string);
-        ByteString rs = str[0];
-        ByteString empty = str[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException(String.format("trailing junk after DER sig: %s", BinaryAscii.hexFromBinary(empty)));
+    public static Signature fromDer(byte[] der, Boolean recoveryByte) throws Exception {
+        BigInteger recoveryId = null;
+        if (recoveryByte) {
+            recoveryId = BigInteger.valueOf(der[0]);
+            recoveryId = recoveryId.subtract(BigInteger.valueOf(27));
+            der = Arrays.copyOfRange(der, 1, der.length);
         }
-        Object[] o = Der.removeInteger(rs);
-        BigInteger r = new BigInteger(o[0].toString());
-        ByteString rest = (ByteString) o[1];
-        o = Der.removeInteger(rest);
-        BigInteger s = new BigInteger(o[0].toString());
-        empty = (ByteString) o[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException(String.format("trailing junk after DER numbers: %s", BinaryAscii.hexFromBinary(empty)));
-        }
-        return new Signature(r, s);
+
+        String hexadecimal = Binary.hexFromByte(der);
+        return Signature.fromString(hexadecimal, recoveryId);
     }
 
-    /**
-     *
-     * @param string byteString
-     * @return Signature
-     */
-    public static Signature fromBase64(ByteString string) {
-        ByteString der = null;
-        try {
-            der = new ByteString(Base64.decode(string.getBytes()));
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Corrupted base64 string! Could not decode base64 from it");
-        }
-        return fromDer(der);
+    public static Signature fromDer(byte[] der) throws Exception {
+        return Signature.fromDer(der, false);
+    }
+
+    public static Signature fromBase64(String string, Boolean recoveryByte) throws Exception {
+        byte[] der = Binary.byteFromBase64(string);
+        return Signature.fromDer(der, recoveryByte);
+    }
+
+    public static Signature fromBase64(String string) throws Exception {
+        return Signature.fromBase64(string, false);
+    }
+
+    public String _toString() {
+        return Der.encodeConstructed(
+            Der.encodePrimitive(DerFieldType.Integer, this.r.toString()),
+            Der.encodePrimitive(DerFieldType.Integer, this.s.toString())
+        );
+    }
+
+    private static Signature fromString(String string, BigInteger recoveryId) throws Exception {
+        Object[] parsed = (Object[]) Der.parse(string)[0];
+        BigInteger r = new BigInteger(parsed[0].toString());
+        Object[] parsedS = (Object[]) parsed[1];
+        BigInteger s = new BigInteger(parsedS[0].toString());
+        return new Signature(r, s, recoveryId);
     }
 }

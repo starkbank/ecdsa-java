@@ -1,23 +1,40 @@
 package com.starkbank.ellipticcurve;
-import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.Der;
-import com.starkbank.ellipticcurve.utils.BinaryAscii;
+import com.starkbank.ellipticcurve.utils.Pem;
+import com.starkbank.ellipticcurve.utils.Binary;
 import com.starkbank.ellipticcurve.utils.RandomInteger;
+import com.starkbank.ellipticcurve.utils.Der.DerFieldType;
 import java.math.BigInteger;
-import java.util.Arrays;
 
 
 public class PrivateKey {
 
     public Curve curve;
     public BigInteger secret;
+    private static final String pemTemplate = "-----BEGIN EC PRIVATE KEY-----\n%s-----END EC PRIVATE KEY-----";
 
     /**
      *
      */
     public PrivateKey() {
         this(Curve.secp256k1, null);
-        secret = RandomInteger.between(BigInteger.ONE, curve.N);
+        secret = RandomInteger.between(BigInteger.ONE, curve.N.subtract(BigInteger.ONE));
+    }
+    
+    /**
+     *
+     * @param curve curve
+     */
+    public PrivateKey(Curve curve) {
+        this(curve, RandomInteger.between(BigInteger.ONE, curve.N.subtract(BigInteger.ONE)));
+    }
+
+    /**
+     *
+     * @param secret secret
+     */
+    public PrivateKey(BigInteger secret) {
+        this(Curve.secp256k1, secret);
     }
 
     /**
@@ -40,136 +57,67 @@ public class PrivateKey {
         return new PublicKey(publicPoint, curve);
     }
 
-    /**
-     *
-     * @return ByteString
-     */
-    public ByteString toByteString() {
-        return BinaryAscii.stringFromNumber(this.secret, this.curve.length());
+    public String toString() {
+        return Binary.hexFromInt(secret);
     }
 
-    /**
-     *
-     * @return ByteString
-     */
-    public ByteString toDer() {
-        ByteString encodedPublicKey = this.publicKey().toByteString(true);
-        return Der.encodeSequence(
-                Der.encodeInteger(BigInteger.valueOf(1)),
-                Der.encodeOctetString(this.toByteString()),
-                Der.encodeConstructed(0, Der.encodeOid(this.curve.oid)),
-                Der.encodeConstructed(1, Der.encodeBitString(encodedPublicKey)));
+    public byte[] toDer() {
+        String publicKeyString = this.publicKey().toString(true);
+        String hexadecimal = Der.encodeConstructed(
+            Der.encodePrimitive(DerFieldType.Integer, "1"),
+            Der.encodePrimitive(DerFieldType.OctetString, Binary.hexFromInt(this.secret)),
+            Der.encodePrimitive(DerFieldType.OidContainer, Der.encodePrimitive(DerFieldType.Object, this.curve.oid)),
+            Der.encodePrimitive(DerFieldType.PublicKeyPointContainer, Der.encodePrimitive(DerFieldType.BitString, publicKeyString))
+        );
+        return Binary.byteFromHex(hexadecimal);
     }
 
-    /**
-     *
-     * @return String
-     */
     public String toPem() {
-        return Der.toPem(this.toDer(), "EC PRIVATE KEY");
+        byte[] der = this.toDer();
+        return Pem.createPem(Binary.base64FromByte(der), pemTemplate);
     }
 
-
-    /**
-     *
-     * @param string string
-     * @return PrivateKey
-     */
-    public static PrivateKey fromPem(String string) {
-        String privkeyPem = string.substring(string.indexOf("-----BEGIN EC PRIVATE KEY-----"));
-        return PrivateKey.fromDer(Der.fromPem(privkeyPem));
+    public static PrivateKey fromPem(String pem) throws Exception {
+        String privateKeyPem = Pem.getPemContent(pem, pemTemplate);
+        byte[] der = Binary.byteFromBase64(privateKeyPem);
+        return fromDer(der);
     }
 
-    /**
-     *
-     * @param string string
-     * @return Privatekey
-     */
-    public static PrivateKey fromDer(String string) {
-        return fromDer(new ByteString(string.getBytes()));
+    public static PrivateKey fromDer(byte[] der) throws Exception {
+        String hexadecimal = Binary.hexFromByte(der);
+        Object[] parsed = (Object[]) Der.parse(hexadecimal)[0];
+
+        int privateKeyFlag = Integer.parseInt(parsed[0].toString());
+        Object[] parsedObject = (Object[]) parsed[1];
+
+        String secretHex = parsedObject[0].toString();
+        Object[] parsedObject1 = (Object[]) parsedObject[1];
+
+        Object[] curveDataObject = (Object[]) parsedObject1[0];
+        long[] curveData = Binary.longFromString(curveDataObject[0].toString());
+        
+        Object[] publicKeyStringObject = (Object[]) parsedObject1[1];
+        String publicKeyString = publicKeyStringObject[0].toString().toLowerCase();
+
+        if (privateKeyFlag != 1){
+            throw new Exception("Private keys should start with a '1' flag, but a " + privateKeyFlag + " was found instead");
+        }
+
+        Curve curve = Curve.getByOid(curveData);
+        PrivateKey privateKey = PrivateKey.fromString(secretHex, curve);
+        if (!privateKey.publicKey().toString(true).equals(publicKeyString)){
+            throw new Exception("The public key described inside the private key file doesn't match the actual public key of the pair");
+        }
+
+        return privateKey;
     }
 
-    /**
-     *
-     * @param string ByteString
-     * @return PrivateKey
-     */
-    public static PrivateKey fromDer(ByteString string) {
-        ByteString[] str = Der.removeSequence(string);
-        ByteString s = str[0];
-        ByteString empty = str[1];
-        if (!empty.isEmpty()) {
-            throw new RuntimeException(String.format("trailing junk after DER privkey: %s", BinaryAscii.hexFromBinary(empty)));
-        }
-
-        Object[] o = Der.removeInteger(s);
-        long one = Long.valueOf(o[0].toString());
-        s = (ByteString) o[1];
-        if (one != 1) {
-            throw new RuntimeException(String.format("expected '1' at start of DER privkey, got %d", one));
-        }
-
-        str = Der.removeOctetString(s);
-        ByteString privkeyStr = str[0];
-        s = str[1];
-        Object[] t = Der.removeConstructed(s);
-        long tag = Long.valueOf(t[0].toString());
-        ByteString curveOidStr = (ByteString) t[1];
-        s = (ByteString) t[2];
-        if (tag != 0) {
-            throw new RuntimeException(String.format("expected tag 0 in DER privkey, got %d", tag));
-        }
-
-        o = Der.removeObject(curveOidStr);
-        long[] oidCurve = (long[]) o[0];
-        empty = (ByteString) o[1];
-        if (!"".equals(empty.toString())) {
-            throw new RuntimeException(String.format("trailing junk after DER privkey curve_oid: %s", BinaryAscii.hexFromBinary(empty)));
-        }
-        Curve curve = (Curve) Curve.curvesByOid.get(Arrays.hashCode(oidCurve));
-        if (curve == null) {
-            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s", Arrays.toString(oidCurve), Arrays.toString(Curve.supportedCurves.toArray())));
-        }
-
-        if (privkeyStr.length() < curve.length()) {
-            int l = curve.length() - privkeyStr.length();
-            byte[] bytes = new byte[l + privkeyStr.length()];
-            for (int i = 0; i < curve.length() - privkeyStr.length(); i++) {
-                bytes[i] = 0;
-            }
-            byte[] privateKey = privkeyStr.getBytes();
-            System.arraycopy(privateKey, 0, bytes, l, bytes.length - l);
-            privkeyStr = new ByteString(bytes);
-        }
-
-        return PrivateKey.fromString(privkeyStr, curve);
+    public static PrivateKey fromString(String string, Curve curve){
+        return new PrivateKey(curve, Binary.intFromHex(string));
     }
 
-    /**
-     *
-     * @param string byteString
-     * @param curve curve
-     * @return PrivateKey
-     */
-    public static PrivateKey fromString(ByteString string, Curve curve) {
-        return new PrivateKey(curve, BinaryAscii.numberFromString(string.getBytes()));
-    }
-
-    /**
-     *
-     * @param string string
-     * @return PrivateKey
-     */
-    public static PrivateKey fromString(String string) {
-        return fromString(new ByteString(string.getBytes()));
-    }
-
-    /**
-     *
-     * @param string byteString
-     * @return PrivateKey
-     */
-    public static PrivateKey fromString(ByteString string) {
-        return PrivateKey.fromString(string, Curve.secp256k1);
+    public static PrivateKey fromString(String string){
+        Curve curve = Curve.secp256k1;
+        return fromString(string, curve);
     }
 }

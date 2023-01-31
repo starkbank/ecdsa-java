@@ -3,7 +3,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 
-public class SignatureTest {
+public class SignatureWithRecoveryIdTest {
 
     @Test
     public void testDerConversion() throws Exception {
@@ -12,12 +12,13 @@ public class SignatureTest {
 
         Signature signature1 = Ecdsa.sign(message, privateKey);
 
-        byte[] der = signature1.toDer();
+        byte[] der = signature1.toDer(true);
 
-        Signature signature2 = Signature.fromDer(der);
+        Signature signature2 = Signature.fromDer(der, true);
 
         assertEquals(signature1.r, signature2.r);
         assertEquals(signature1.s, signature2.s);
+        assertEquals(signature1.recoveryId, signature2.recoveryId);
     }
 
     @Test

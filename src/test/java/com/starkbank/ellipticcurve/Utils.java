@@ -2,16 +2,18 @@ package com.starkbank.ellipticcurve;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 
 class Utils {
 
     static String readFileAsString(String path) throws URISyntaxException, IOException {
-        return new String(readFileAsBytes(path), "ASCII");
+        return new String(readFileAsBytes(path), StandardCharsets.US_ASCII);
     }
 
     static byte[] readFileAsBytes(String path) throws URISyntaxException {
-        return read(ClassLoader.getSystemClassLoader().getResource(path).toURI().getPath());
+        return read(Objects.requireNonNull(ClassLoader.getSystemClassLoader().getResource(path)).toURI().getPath());
     }
 
     private static byte[] read(String path) {

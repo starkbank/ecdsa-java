@@ -1,4 +1,5 @@
 package com.starkbank.ellipticcurve;
+
 import com.starkbank.ellipticcurve.utils.ByteString;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
@@ -7,7 +8,7 @@ import static org.junit.Assert.assertEquals;
 public class PrivateKeyTest {
 
     @Test
-    public void  testPemConversion() {
+    public void testPemConversion() {
         PrivateKey privateKey1 = new PrivateKey();
         String pem = privateKey1.toPem();
         PrivateKey privateKey2 = PrivateKey.fromPem(pem);
@@ -25,7 +26,7 @@ public class PrivateKeyTest {
     }
 
     @Test
-    public void  testStringConversion() {
+    public void testStringConversion() {
         PrivateKey privateKey1 = new PrivateKey();
         ByteString string = privateKey1.toByteString();
         PrivateKey privateKey2 = PrivateKey.fromString(string);

@@ -2,12 +2,11 @@ package com.starkbank.ellipticcurve;
 import java.math.BigInteger;
 import java.util.*;
 
+
 /**
  * Elliptic Curve Equation.
  * y^2 = x^3 + A*x + B (mod P)
- *
  */
-
 public class Curve {
 
     public BigInteger A;
@@ -16,10 +15,10 @@ public class Curve {
     public BigInteger N;
     public Point G;
     public String name;
+    public String nistName;
     public long[] oid;
 
     /**
-     *
      * @param A A
      * @param B B
      * @param P P
@@ -30,12 +29,28 @@ public class Curve {
      * @param oid oid
      */
     public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid) {
+        this(A, B, P, N, Gx, Gy, name, oid, null);
+    }
+
+    /**
+     * @param A A
+     * @param B B
+     * @param P P
+     * @param N N
+     * @param Gx Gx
+     * @param Gy Gy
+     * @param name name
+     * @param oid oid
+     * @param nistName nistName
+     */
+    public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid, String nistName) {
         this.A = A;
         this.B = B;
         this.P = P;
         this.N = N;
         this.G = new Point(Gx, Gy);
         this.name = name;
+        this.nistName = nistName;
         this.oid = oid;
     }
 
@@ -43,26 +58,25 @@ public class Curve {
      * Verify if the point `p` is on the curve
      *
      * @param p Point p = Point(x, y)
-     * @return true if point is in the curve otherwise false
+     * @return true if point is on the curve otherwise false
      */
     public boolean contains(Point p) {
-        if (p.x.compareTo(BigInteger.ZERO) < 0) {
+        if (p.x.compareTo(BigInteger.ZERO) < 0 || p.x.compareTo(this.P.subtract(BigInteger.ONE)) > 0) {
             return false;
         }
-        if (p.x.compareTo(this.P) >= 0) {
+        if (p.y.compareTo(BigInteger.ZERO) < 0 || p.y.compareTo(this.P.subtract(BigInteger.ONE)) > 0) {
             return false;
         }
-        if (p.y.compareTo(BigInteger.ZERO) < 0) {
-            return false;
-        }
-        if (p.y.compareTo(this.P) >= 0) {
-            return false;
-        }
-        return p.y.pow(2).subtract(p.x.pow(3).add(A.multiply(p.x)).add(B)).mod(P).intValue() == 0;
+        // y^2 - (x^3 + A*x + B) mod P == 0
+        BigInteger lhs = p.y.modPow(BigInteger.TWO, this.P);
+        BigInteger rhs = p.x.modPow(BigInteger.valueOf(3), this.P)
+                .add(this.A.multiply(p.x))
+                .add(this.B)
+                .mod(this.P);
+        return lhs.equals(rhs);
     }
 
     /**
-     *
      * @return int
      */
     public int length() {
@@ -70,8 +84,24 @@ public class Curve {
     }
 
     /**
+     * Compute the y coordinate for a given x on the curve
      *
+     * @param x the x coordinate
+     * @param isEven whether the y coordinate should be even
+     * @return the y coordinate
      */
+    public BigInteger y(BigInteger x, boolean isEven) {
+        BigInteger ySquared = x.modPow(BigInteger.valueOf(3), this.P)
+                .add(this.A.multiply(x))
+                .add(this.B)
+                .mod(this.P);
+        BigInteger y = Math.modularSquareRoot(ySquared, this.P);
+        if (isEven != y.mod(BigInteger.TWO).equals(BigInteger.ZERO)) {
+            y = this.P.subtract(y);
+        }
+        return y;
+    }
+
     public static final Curve secp256k1 = new Curve(
         BigInteger.ZERO,
         BigInteger.valueOf(7),
@@ -83,22 +113,58 @@ public class Curve {
         new long[]{1, 3, 132, 0, 10}
     );
 
-    /**
-     *
-     */
-    public static final List supportedCurves = new ArrayList();
+    public static final Curve prime256v1 = new Curve(
+        new BigInteger("ffffffff00000001000000000000000000000000fffffffffffffffffffffffc", 16),
+        new BigInteger("5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b", 16),
+        new BigInteger("ffffffff00000001000000000000000000000000ffffffffffffffffffffffff", 16),
+        new BigInteger("ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551", 16),
+        new BigInteger("6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296", 16),
+        new BigInteger("4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5", 16),
+        "prime256v1",
+        new long[]{1, 2, 840, 10045, 3, 1, 7},
+        "P-256"
+    );
 
-    /**
-     *
-     */
-    public static final Map curvesByOid = new HashMap();
+    public static final Curve p256 = prime256v1;
+
+    public static final List<Curve> supportedCurves = new ArrayList<>();
+
+    public static final Map<Integer, Curve> curvesByOid = new HashMap<>();
 
     static {
-        supportedCurves.add(secp256k1);
+        add(secp256k1);
+        add(prime256v1);
+    }
 
-        for (Object c : supportedCurves) {
-            Curve curve = (Curve) c;
-            curvesByOid.put(Arrays.hashCode(curve.oid), curve);
+    /**
+     * Register a curve so it can be looked up by OID
+     *
+     * @param curve the curve to register
+     */
+    public static void add(Curve curve) {
+        supportedCurves.add(curve);
+        curvesByOid.put(Arrays.hashCode(curve.oid), curve);
+    }
+
+    /**
+     * Look up a curve by OID
+     *
+     * @param oid the OID to look up
+     * @return the curve
+     */
+    public static Curve getByOid(long[] oid) {
+        Curve curve = curvesByOid.get(Arrays.hashCode(oid));
+        if (curve == null) {
+            StringBuilder names = new StringBuilder();
+            for (int i = 0; i < supportedCurves.size(); i++) {
+                if (i > 0) names.append(", ");
+                names.append(supportedCurves.get(i).name);
+            }
+            throw new RuntimeException(String.format(
+                "Unknown curve with oid %s; The following are registered: %s",
+                Arrays.toString(oid), names.toString()
+            ));
         }
+        return curve;
     }
 }

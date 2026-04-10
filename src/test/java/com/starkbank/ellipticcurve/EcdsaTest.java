@@ -1,8 +1,7 @@
 package com.starkbank.ellipticcurve;
+
 import org.junit.Test;
-
 import java.math.BigInteger;
-
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -38,8 +37,8 @@ public class EcdsaTest {
         PrivateKey privateKey = new PrivateKey();
         PublicKey publicKey = privateKey.publicKey();
 
-        String message = "This is the right message";
+        String message2 = "This is the wrong message";
 
-        assertFalse(Ecdsa.verify(message, new Signature(BigInteger.ZERO, BigInteger.ZERO), publicKey));
+        assertFalse(Ecdsa.verify(message2, new Signature(BigInteger.ZERO, BigInteger.ZERO), publicKey));
     }
 }

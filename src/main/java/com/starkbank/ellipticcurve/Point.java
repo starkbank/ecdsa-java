@@ -9,18 +9,14 @@ public class Point {
     public BigInteger z;
 
     /**
-     *
      * @param x x
      * @param y y
      */
     public Point(BigInteger x, BigInteger y) {
-        this.x = x;
-        this.y = y;
-        this.z = BigInteger.ZERO;
+        this(x, y, BigInteger.ZERO);
     }
 
     /**
-     *
      * @param x x
      * @param y y
      * @param z z
@@ -33,5 +29,10 @@ public class Point {
 
     public boolean isAtInfinity() {
         return this.y.equals(BigInteger.ZERO);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("(%s, %s, %s)", x, y, z);
     }
 }

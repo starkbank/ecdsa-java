@@ -1,8 +1,19 @@
-## A lightweight and fast ECDSA
+## A lightweight and fast pure Java ECDSA
 
 ### Overview
 
-This is a pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). It is compatible with Java 8+ and OpenSSL. It uses some elegant math such as Jacobian Coordinates to speed up the ECDSA.
+This is a pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). It is compatible with Java 8+ and OpenSSL. It uses elegant math such as Jacobian Coordinates to speed up the ECDSA on pure Java.
+
+### Security
+
+starkbank-ecdsa includes the following security features:
+
+- **RFC 6979 deterministic nonces**: Eliminates the catastrophic risk of nonce reuse that leaks private keys
+- **Low-S signature normalization**: Prevents signature malleability (BIP-62)
+- **Public key on-curve validation**: Blocks invalid-curve attacks during verification
+- **Montgomery ladder scalar multiplication**: Constant-operation point multiplication to mitigate timing side channels
+- **Hash truncation**: Correctly handles hash functions larger than the curve order (e.g. SHA-512 with secp256k1)
+- **Fermat's little theorem for modular inverse**: More uniform execution time than the extended Euclidean algorithm
 
 ### Installation
 
@@ -13,7 +24,7 @@ In pom.xml:
 <dependency>
     <groupId>com.starkbank</groupId>
     <artifactId>starkbank-ecdsa</artifactId>
-    <version>1.0.2</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -24,20 +35,21 @@ mvn clean install
 
 ### Curves
 
-We currently support `secp256k1`, but it's super easy to add more curves to the project. Just add them on `Curve.java`
+We currently support `secp256k1` and `prime256v1` (P-256), but you can add more curves to the project. Just use `Curve.add()`.
 
 ### Speed
 
-We ran a test on JDK 13.0.1 on a MAC Pro i5 2019. The libraries ran 100 times and showed the average times displayed bellow:
+We ran a test on JDK 21.0.10 on a MAC Pro. The libraries were run 100 times and the averages displayed below were obtained:
 
 | Library            | sign          | verify  |
 | ------------------ |:-------------:| -------:|
-| [java.security]    |     0.9ms     |  2.4ms  |
-| starkbank-ecdsa    |     4.3ms     |  9.9ms  |
+| starkbank-ecdsa    |     2.9ms     |  1.8ms  |
+
+Our pure Java code uses Jacobian Coordinates, a Montgomery ladder for constant-time scalar multiplication, and Shamir's trick for fast signature verification.
 
 ### Sample Code
 
-How to use it:
+How to sign a json message for [Stark Bank]:
 
 ```java
 import com.starkbank.ellipticcurve.PrivateKey;
@@ -46,26 +58,93 @@ import com.starkbank.ellipticcurve.Signature;
 import com.starkbank.ellipticcurve.Ecdsa;
 
 
-public class GenerateKeys{
+// Generate privateKey from PEM string
+PrivateKey privateKey = PrivateKey.fromPem("-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----");
 
-    public static void main(String[] args){
-        // Generate Keys
-        PrivateKey privateKey = new PrivateKey();
-        PublicKey publicKey = privateKey.publicKey();
+String message = "{\"transfers\": [{\"amount\": 100000000}]}";
 
-        String message = "Testing message";
-        // Generate Signature
-        Signature signature = Ecdsa.sign(message, privateKey);
+Signature signature = Ecdsa.sign(message, privateKey);
 
-        // Verify if signature is valid
-        boolean verified = Ecdsa.verify(message, signature, publicKey) ;
+// Generate Signature in base64
+System.out.println(signature.toBase64());
 
-        // Return the signature verification status
-        System.out.println("Verified: " + verified);
-
-    }
-}
+// To double check if the message matches the signature:
+PublicKey publicKey = privateKey.publicKey();
+System.out.println(Ecdsa.verify(message, signature, publicKey));
 ```
+
+Simple use:
+
+```java
+import com.starkbank.ellipticcurve.PrivateKey;
+import com.starkbank.ellipticcurve.PublicKey;
+import com.starkbank.ellipticcurve.Signature;
+import com.starkbank.ellipticcurve.Ecdsa;
+
+
+// Generate new Keys
+PrivateKey privateKey = new PrivateKey();
+PublicKey publicKey = privateKey.publicKey();
+
+String message = "My test message";
+
+// Generate Signature
+Signature signature = Ecdsa.sign(message, privateKey);
+
+// To verify if the signature is valid
+System.out.println(Ecdsa.verify(message, signature, publicKey));
+```
+
+How to add more curves:
+
+```java
+import com.starkbank.ellipticcurve.Curve;
+import com.starkbank.ellipticcurve.PrivateKey;
+import com.starkbank.ellipticcurve.PublicKey;
+import java.math.BigInteger;
+
+Curve newCurve = new Curve(
+    new BigInteger("f1fd178c0b3ad58f10126de8ce42435b3961adbcabc8ca6de8fcf353d86e9c00", 16),
+    new BigInteger("ee353fca5428a9300d4aba754a44c00fdfec0c9ae4b1a1803075ed967b7bb73f", 16),
+    new BigInteger("f1fd178c0b3ad58f10126de8ce42435b3961adbcabc8ca6de8fcf353d86e9c03", 16),
+    new BigInteger("f1fd178c0b3ad58f10126de8ce42435b53dc67e140d2bf941ffdd459c6d655e1", 16),
+    new BigInteger("b6b3d4c356c139eb31183d4749d423958c27d2dcaf98b70164c97a2dd98f5cff", 16),
+    new BigInteger("6142e0f7c8b204911f9271f0f3ecef8c2701c307e8e4c9e183115a1554062cfb", 16),
+    "frp256v1",
+    new long[]{1, 2, 250, 1, 223, 101, 256, 1}
+);
+
+Curve.add(newCurve);
+
+PrivateKey privateKey = new PrivateKey(newCurve, null);
+PublicKey publicKey = privateKey.publicKey();
+System.out.println(publicKey.toPem());
+```
+
+How to generate compressed public key:
+
+```java
+import com.starkbank.ellipticcurve.PrivateKey;
+import com.starkbank.ellipticcurve.PublicKey;
+
+PrivateKey privateKey = new PrivateKey();
+PublicKey publicKey = privateKey.publicKey();
+String compressedPublicKey = publicKey.toCompressed();
+
+System.out.println(compressedPublicKey);
+```
+
+How to recover a compressed public key:
+
+```java
+import com.starkbank.ellipticcurve.PublicKey;
+
+String compressedPublicKey = "0252972572d465d016d4c501887b8df303eee3ed602c056b1eb09260dfa0da0ab2";
+PublicKey publicKey = PublicKey.fromCompressed(compressedPublicKey);
+
+System.out.println(publicKey.toPem());
+```
+
 ### OpenSSL
 
 This library is compatible with OpenSSL, so you can use it to generate keys:
@@ -78,10 +157,10 @@ openssl ec -in privateKey.pem -pubout -out publicKey.pem
 Create a message.txt file and sign it:
 
 ```
-openssl dgst -sha256 -sign privateKey.pem -out signatureBinary.txt message.txt
+openssl dgst -sha256 -sign privateKey.pem -out signatureDer.txt message.txt
 ```
 
-It's time to verify:
+To verify, do this:
 
 ```java
 import com.starkbank.ellipticcurve.Ecdsa;
@@ -90,65 +169,52 @@ import com.starkbank.ellipticcurve.Signature;
 import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.File;
 
+String publicKeyPem = File.read("publicKey.pem");
+byte[] signatureBin = File.readBytes("signatureDer.txt");
+String message = File.read("message.txt");
 
-public class VerifyKeys {
+PublicKey publicKey = PublicKey.fromPem(publicKeyPem);
+Signature signature = Signature.fromDer(new ByteString(signatureBin));
 
-    public static void main(String[] args){
-        // Read files
-        String publicKeyPem = File.read("publicKey.pem");
-        byte[] signatureBin = File.readBytes("signatureBinary.txt");
-        String message = File.read("message.txt");
-
-        ByteString byteString = new ByteString(signatureBin);
-
-        PublicKey publicKey = PublicKey.fromPem(publicKeyPem);
-        Signature signature = Signature.fromDer(byteString);
-
-        // Get verification status:
-        boolean verified = Ecdsa.verify(message, signature, publicKey);
-        System.out.println("Verification status: " + verified);
-    }
-}
+System.out.println(Ecdsa.verify(message, signature, publicKey));
 ```
 
 You can also verify it on terminal:
 
 ```
-openssl dgst -sha256 -verify publicKey.pem -signature signatureBinary.txt message.txt
+openssl dgst -sha256 -verify publicKey.pem -signature signatureDer.txt message.txt
 ```
 
-NOTE: If you want to create a Digital Signature to use in the [Stark Bank], you need to convert the binary signature to base64.
+NOTE: If you want to create a Digital Signature to use with [Stark Bank], you need to convert the binary signature to base64.
 
 ```
-openssl base64 -in signatureBinary.txt -out signatureBase64.txt
+openssl base64 -in signatureDer.txt -out signatureBase64.txt
 ```
 
-You can also verify it with this library:
+You can do the same with this library:
 
 ```java
-import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.Signature;
+import com.starkbank.ellipticcurve.utils.ByteString;
 import com.starkbank.ellipticcurve.utils.File;
 
+byte[] signatureBin = File.readBytes("signatureDer.txt");
+Signature signature = Signature.fromDer(new ByteString(signatureBin));
 
-public class GenerateSignature {
-
-    public static void main(String[] args) {
-        // Load signature file
-        byte[] signatureBin = File.readBytes("signatureBinary.txt");
-        Signature signature = Signature.fromDer(new ByteString(signatureBin));
-        // Print signature
-        System.out.println(signature.toBase64());
-        }
-}
+System.out.println(signature.toBase64());
 ```
 
-[Stark Bank]: https://starkbank.com
+### Run unit tests
 
-### Run all unit tests
 ```shell
 gradle test
 ```
 
-[ecdsa-python]: https://github.com/starkbank/ecdsa-python
+### Run benchmark
+
+```shell
+gradle run
+```
+
+[Stark Bank]: https://starkbank.com
 [java.security]: https://docs.oracle.com/javase/7/docs/api/index.html

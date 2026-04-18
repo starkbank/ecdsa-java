@@ -9,6 +9,10 @@ public final class Math {
     private static final BigInteger FOUR = BigInteger.valueOf(4);
     private static final BigInteger EIGHT = BigInteger.valueOf(8);
 
+    private static final int GENERATOR_WINDOW_BITS = 4;
+    private static final int GENERATOR_WINDOW_SIZE = 1 << GENERATOR_WINDOW_BITS;
+    private static final int GENERATOR_WINDOW_MASK = GENERATOR_WINDOW_SIZE - 1;
+
     /**
      * Tonelli-Shanks algorithm for modular square root. Works for all odd primes.
      *
@@ -119,18 +123,87 @@ public final class Math {
     }
 
     /**
-     * Modular inverse using Fermat's little theorem: x^(n-2) mod n.
-     * Requires n to be prime (true for all ECDSA curve parameters).
+     * Modular inverse via the extended Euclidean algorithm
+     * (BigInteger.modInverse). Roughly 2-3x faster than Fermat's little
+     * theorem for 256-bit operands.
      *
-     * @param x Divisor
-     * @param n Mod for division (must be prime)
+     * @param x Divisor (must be coprime to n)
+     * @param n Mod for division
      * @return Value representing the modular inverse
      */
     public static BigInteger inv(BigInteger x, BigInteger n) {
-        if (x.equals(BigInteger.ZERO)) {
-            return BigInteger.ZERO;
+        if (x.mod(n).equals(BigInteger.ZERO)) {
+            throw new ArithmeticException("0 has no modular inverse");
         }
-        return x.modPow(n.subtract(TWO), n);
+        return x.modInverse(n);
+    }
+
+    /**
+     * Fast scalar multiplication n*G where G is the curve generator, using
+     * a precomputed window table (2^w-ary method). Roughly 2-3x faster
+     * than variable-base multiplication because doublings stay cheap and
+     * additions use pre-stored multiples of G.
+     *
+     * @param curve Elliptic curve whose generator G is multiplied
+     * @param n Scalar multiplier
+     * @return Point n*G
+     */
+    public static Point multiplyGenerator(Curve curve, BigInteger n) {
+        if (n.signum() < 0 || n.compareTo(curve.N) >= 0) {
+            n = n.mod(curve.N);
+        }
+        if (n.equals(BigInteger.ZERO)) {
+            return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
+        }
+
+        Point[] table = generatorTable(curve);
+        int w = GENERATOR_WINDOW_BITS;
+        BigInteger A = curve.A;
+        BigInteger P = curve.P;
+
+        // Jacobian infinity (y=0 triggers early-return in jacobianAdd)
+        Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        int startBit = ((curve.nBitLength - 1) / w) * w;
+        for (int bit = startBit; bit >= 0; bit -= w) {
+            for (int j = 0; j < w; j++) {
+                r = jacobianDouble(r, A, P);
+            }
+            int window = 0;
+            for (int j = w - 1; j >= 0; j--) {
+                window = (window << 1) | (n.testBit(bit + j) ? 1 : 0);
+            }
+            window &= GENERATOR_WINDOW_MASK;
+            if (window != 0) {
+                r = jacobianAdd(r, table[window], A, P);
+            }
+        }
+        return fromJacobian(r, P);
+    }
+
+    /**
+     * Lazily build and cache the precomputed window table
+     * [infinity, G, 2G, ..., (2^w - 1) G] in Jacobian coordinates on the
+     * given curve. Idempotent: repeated calls return the same array.
+     *
+     * @param curve Elliptic curve whose generator is tabulated
+     * @return Window table of Jacobian points
+     */
+    static Point[] generatorTable(Curve curve) {
+        Point[] cached = curve.generatorTable;
+        if (cached != null) {
+            return cached;
+        }
+        BigInteger A = curve.A;
+        BigInteger P = curve.P;
+        Point G = new Point(curve.G.x, curve.G.y, BigInteger.ONE);
+        Point[] table = new Point[GENERATOR_WINDOW_SIZE];
+        table[0] = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        table[1] = G;
+        for (int i = 2; i < GENERATOR_WINDOW_SIZE; i++) {
+            table[i] = jacobianAdd(table[i - 1], G, A, P);
+        }
+        curve.generatorTable = table;
+        return table;
     }
 
     /**
@@ -176,7 +249,16 @@ public final class Math {
         BigInteger ysq = py.multiply(py).mod(P);
         BigInteger S = FOUR.multiply(px).multiply(ysq).mod(P);
         BigInteger pz2 = pz.multiply(pz).mod(P);
-        BigInteger M = THREE.multiply(px).multiply(px).add(A.multiply(pz2).multiply(pz2)).mod(P);
+        BigInteger M;
+        if (A.signum() == 0) {
+            // A = 0 (secp256k1): skip A*pz^4 term
+            M = THREE.multiply(px).multiply(px).mod(P);
+        } else if (A.equals(P.subtract(THREE))) {
+            // A = -3 (prime256v1): M = 3*(px - pz^2)*(px + pz^2)
+            M = THREE.multiply(px.subtract(pz2)).multiply(px.add(pz2)).mod(P);
+        } else {
+            M = THREE.multiply(px).multiply(px).add(A.multiply(pz2).multiply(pz2)).mod(P);
+        }
         BigInteger nx = M.multiply(M).subtract(TWO.multiply(S)).mod(P);
         BigInteger ny = M.multiply(S.subtract(nx)).subtract(EIGHT.multiply(ysq).multiply(ysq)).mod(P);
         BigInteger nz = TWO.multiply(py).multiply(pz).mod(P);

@@ -43,9 +43,9 @@ We ran a test on JDK 21.0.10 on a MAC Pro. The libraries were run 100 times and 
 
 | Library            | sign          | verify  |
 | ------------------ |:-------------:| -------:|
-| starkbank-ecdsa    |     2.9ms     |  1.8ms  |
+| starkbank-ecdsa    |     1.5ms     |  1.7ms  |
 
-Our pure Java code uses Jacobian Coordinates, a Montgomery ladder for constant-time scalar multiplication, and Shamir's trick for fast signature verification.
+Performance is driven by Jacobian coordinates, a branch-balanced Montgomery ladder for variable-base scalar multiplication, a precomputed window table (2^4-ary method) for the fixed generator used in signing, curve-specific shortcuts in point doubling (A=0 for secp256k1, A=-3 for prime256v1), Shamir's trick for combined scalar multiplication during verification, and the extended Euclidean algorithm for modular inversion.
 
 ### Sample Code
 

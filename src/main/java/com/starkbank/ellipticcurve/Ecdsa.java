@@ -20,7 +20,7 @@ public class Ecdsa {
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
         Curve curve = privateKey.curve;
         byte[] byteMessage = hashfunc.digest(message.getBytes(StandardCharsets.UTF_8));
-        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.N.bitLength());
+        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.nBitLength);
 
         String hmacAlgorithm = getHmacAlgorithm(hashfunc.getAlgorithm());
         Iterator<BigInteger> kIterator = RandomInteger.rfc6979(byteMessage, privateKey.secret, curve, hmacAlgorithm);
@@ -29,7 +29,7 @@ public class Ecdsa {
         Point randSignPoint = null;
         while (r.equals(BigInteger.ZERO) || s.equals(BigInteger.ZERO)) {
             BigInteger randNum = kIterator.next();
-            randSignPoint = Math.multiply(curve.G, randNum, curve.N, curve.A, curve.P);
+            randSignPoint = Math.multiplyGenerator(curve, randNum);
             r = randSignPoint.x.mod(curve.N);
             s = numberMessage.add(r.multiply(privateKey.secret)).multiply(Math.inv(randNum, curve.N)).mod(curve.N);
         }
@@ -75,7 +75,7 @@ public class Ecdsa {
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
         Curve curve = publicKey.curve;
         byte[] byteMessage = hashfunc.digest(message.getBytes(StandardCharsets.UTF_8));
-        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.N.bitLength());
+        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.nBitLength);
         BigInteger r = signature.r;
         BigInteger s = signature.s;
 

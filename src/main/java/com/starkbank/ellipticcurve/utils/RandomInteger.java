@@ -43,7 +43,7 @@ public class RandomInteger {
      * @return an iterator of candidate k values
      */
     public static Iterator<BigInteger> rfc6979(byte[] hashBytes, BigInteger secret, Curve curve, String algorithm) {
-        int orderBitLen = curve.N.bitLength();
+        int orderBitLen = curve.nBitLength;
         int orderByteLen = (orderBitLen + 7) / 8;
 
         // Secret bytes, zero-padded to orderByteLen

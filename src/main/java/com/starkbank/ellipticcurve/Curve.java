@@ -13,10 +13,16 @@ public class Curve {
     public BigInteger B;
     public BigInteger P;
     public BigInteger N;
+    public int nBitLength;
     public Point G;
     public String name;
     public String nistName;
     public long[] oid;
+
+    // Precomputed window table for fixed-base generator multiplication.
+    // Lazily populated by Math.generatorTable and published via a volatile
+    // store; safe to read without locks (Points are effectively immutable).
+    volatile Point[] generatorTable;
 
     /**
      * @param A A
@@ -48,6 +54,7 @@ public class Curve {
         this.B = B;
         this.P = P;
         this.N = N;
+        this.nBitLength = N.bitLength();
         this.G = new Point(Gx, Gy);
         this.name = name;
         this.nistName = nistName;

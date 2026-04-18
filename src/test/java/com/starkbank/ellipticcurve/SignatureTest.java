@@ -3,6 +3,7 @@ package com.starkbank.ellipticcurve;
 import com.starkbank.ellipticcurve.utils.ByteString;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 
 public class SignatureTest {
@@ -35,5 +36,16 @@ public class SignatureTest {
 
         assertEquals(signature1.r, signature2.r);
         assertEquals(signature1.s, signature2.s);
+    }
+
+    @Test
+    public void testUniqueness() {
+        PrivateKey privateKey = new PrivateKey();
+        String message = "This is a text message";
+
+        Signature signature1 = Ecdsa.sign(message, privateKey);
+        Signature signature2 = Ecdsa.sign(message, privateKey);
+
+        assertNotEquals(signature1.toBase64(), signature2.toBase64());
     }
 }

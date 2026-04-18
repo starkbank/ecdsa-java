@@ -31,7 +31,10 @@ public class RandomInteger {
     }
 
     /**
-     * Generate deterministic nonce values per RFC 6979
+     * Generate nonce values per hedged RFC 6979: deterministic k derivation
+     * with fresh random entropy mixed into K-init (RFC 6979 §3.6). Same message
+     * and key yield different signatures, while preserving RFC 6979's protection
+     * against RNG failures.
      *
      * @param hashBytes the hash of the message
      * @param secret the private key secret
@@ -50,6 +53,10 @@ public class RandomInteger {
         BigInteger hashReduced = numberFromByteString(hashBytes, orderBitLen).mod(curve.N);
         byte[] hashOctets = bigIntToFixedBytes(hashReduced, orderByteLen);
 
+        // Fresh random entropy mixed into K-init per RFC 6979 §3.6 (hedged).
+        byte[] extraEntropy = new byte[orderByteLen];
+        secureRandom.nextBytes(extraEntropy);
+
         int hLen = getHmacLength(algorithm);
 
         byte[] V = new byte[hLen];
@@ -57,11 +64,11 @@ public class RandomInteger {
         byte[] K = new byte[hLen];
         Arrays.fill(K, (byte) 0x00);
 
-        // K = HMAC(K, V || 0x00 || secretBytes || hashOctets)
-        K = hmac(algorithm, K, concat(V, new byte[]{0x00}, secretBytes, hashOctets));
+        // K = HMAC(K, V || 0x00 || secretBytes || hashOctets || extraEntropy)
+        K = hmac(algorithm, K, concat(V, new byte[]{0x00}, secretBytes, hashOctets, extraEntropy));
         V = hmac(algorithm, K, V);
-        // K = HMAC(K, V || 0x01 || secretBytes || hashOctets)
-        K = hmac(algorithm, K, concat(V, new byte[]{0x01}, secretBytes, hashOctets));
+        // K = HMAC(K, V || 0x01 || secretBytes || hashOctets || extraEntropy)
+        K = hmac(algorithm, K, concat(V, new byte[]{0x01}, secretBytes, hashOctets, extraEntropy));
         V = hmac(algorithm, K, V);
 
         final byte[] finalK = K;

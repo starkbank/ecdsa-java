@@ -11,9 +11,11 @@ import static org.junit.Assert.*;
 
 public class SecurityTest {
 
-    // ===== Rfc6979KnownAnswerTest (prime256v1/SHA-256) =====
+    // ===== Prime256v1PublicKeyDerivationTest (prime256v1/SHA-256) =====
+    // RFC 6979 A.2.5 public key derivation. Signatures are hedged, so r/s
+    // no longer match fixed test vectors, but pubkey derivation is unchanged.
 
-    public static class Rfc6979KnownAnswerTest {
+    public static class Prime256v1PublicKeyDerivationTest {
         private PrivateKey privateKey;
         private PublicKey publicKey;
 
@@ -39,25 +41,24 @@ public class SecurityTest {
         }
 
         @Test
-        public void testSampleMessageSignature() {
+        public void testSampleMessageRoundTrip() {
             Signature sig = Ecdsa.sign("sample", privateKey);
-            assertEquals(new BigInteger("EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716", 16), sig.r);
-            assertEquals(new BigInteger("834E36AD29A83BF2BC9385E491D6099C8FDF9D1ED67AA7EA5F51F93782857A9", 16), sig.s);
+            assertTrue(sig.s.compareTo(Curve.prime256v1.N.shiftRight(1)) <= 0);
             assertTrue(Ecdsa.verify("sample", sig, publicKey));
         }
 
         @Test
-        public void testTestMessageSignature() {
+        public void testTestMessageRoundTrip() {
             Signature sig = Ecdsa.sign("test", privateKey);
-            assertEquals(new BigInteger("F1ABB023518351CD71D881567B1EA663ED3EFCF6C5132B354F28D3B0B7D38367", 16), sig.r);
-            assertEquals(new BigInteger("019F4113742A2B14BD25926B49C649155F267E60D3814B4C0CC84250E46F0083", 16), sig.s);
+            assertTrue(sig.s.compareTo(Curve.prime256v1.N.shiftRight(1)) <= 0);
             assertTrue(Ecdsa.verify("test", sig, publicKey));
         }
     }
 
-    // ===== Secp256k1KnownAnswerTest =====
+    // ===== Secp256k1PublicKeyDerivationTest =====
+    // secp256k1 with secret=1 (pubkey = generator G).
 
-    public static class Secp256k1KnownAnswerTest {
+    public static class Secp256k1PublicKeyDerivationTest {
         private PrivateKey privateKey;
         private PublicKey publicKey;
 
@@ -74,18 +75,14 @@ public class SecurityTest {
         }
 
         @Test
-        public void testSampleMessageSignature() {
+        public void testSampleMessageRoundTrip() {
             Signature sig = Ecdsa.sign("sample", privateKey);
-            assertEquals(new BigInteger("58DB657BCD631038BEA07B4941172F0167ACA98F12B55E3176BD1C35435D6501", 16), sig.r);
-            assertEquals(new BigInteger("3A78E73D8FF8AB554E13C10F6390D81A882F91945D6275493882676170B53A57", 16), sig.s);
             assertTrue(Ecdsa.verify("sample", sig, publicKey));
         }
 
         @Test
-        public void testTestMessageSignature() {
+        public void testTestMessageRoundTrip() {
             Signature sig = Ecdsa.sign("test", privateKey);
-            assertEquals(new BigInteger("98DF3AAED18D1299109E9732E3015F7E68E5D1FDEAD6924809B410D970A3B0CE", 16), sig.r);
-            assertEquals(new BigInteger("3EF15987C6592379BAAD6392586A382D63952572632FCD951AE75E7471C144C6", 16), sig.s);
             assertTrue(Ecdsa.verify("test", sig, publicKey));
         }
     }
@@ -226,20 +223,19 @@ public class SecurityTest {
         }
     }
 
-    // ===== Rfc6979Test =====
+    // ===== HedgedSignatureTest =====
 
-    public static class Rfc6979Test {
+    public static class HedgedSignatureTest {
 
         @Test
-        public void testDeterministicSignature() {
+        public void testSameInputsProduceDifferentSignatures() {
             PrivateKey privateKey = new PrivateKey();
             String message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey);
             Signature signature2 = Ecdsa.sign(message, privateKey);
 
-            assertEquals(signature1.r, signature2.r);
-            assertEquals(signature1.s, signature2.s);
+            assertTrue(!signature1.r.equals(signature2.r) || !signature1.s.equals(signature2.s));
         }
 
         @Test
@@ -485,15 +481,14 @@ public class SecurityTest {
         }
 
         @Test
-        public void testSha512DeterministicSignature() throws NoSuchAlgorithmException {
+        public void testSha512SignaturesAreHedged() throws NoSuchAlgorithmException {
             PrivateKey privateKey = new PrivateKey();
             String message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey, MessageDigest.getInstance("SHA-512"));
             Signature signature2 = Ecdsa.sign(message, privateKey, MessageDigest.getInstance("SHA-512"));
 
-            assertEquals(signature1.r, signature2.r);
-            assertEquals(signature1.s, signature2.s);
+            assertTrue(!signature1.r.equals(signature2.r) || !signature1.s.equals(signature2.s));
         }
 
         @Test
@@ -524,15 +519,14 @@ public class SecurityTest {
         }
 
         @Test
-        public void testDeterministicSignature() {
+        public void testSignaturesAreHedged() {
             PrivateKey privateKey = new PrivateKey(Curve.prime256v1, null);
             String message = "test message";
 
             Signature signature1 = Ecdsa.sign(message, privateKey);
             Signature signature2 = Ecdsa.sign(message, privateKey);
 
-            assertEquals(signature1.r, signature2.r);
-            assertEquals(signature1.s, signature2.s);
+            assertTrue(!signature1.r.equals(signature2.r) || !signature1.s.equals(signature2.s));
         }
 
         @Test

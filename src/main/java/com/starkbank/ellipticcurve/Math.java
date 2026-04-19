@@ -99,7 +99,7 @@ public final class Math {
     }
 
     /**
-     * Compute n1*p1 + n2*p2 using Shamir's trick (simultaneous double-and-add).
+     * Compute n1*p1 + n2*p2 using Shamir's trick with JSF.
      * Not constant-time -- use only with public scalars (e.g. verification).
      *
      * @param p1 First point
@@ -115,6 +115,30 @@ public final class Math {
         return fromJacobian(
             shamirMultiply(toJacobian(p1), n1, toJacobian(p2), n2, N, A, P),
             P
+        );
+    }
+
+    /**
+     * Compute n1*p1 + n2*p2. If the curve exposes GLV parameters (e.g.
+     * secp256k1), uses the GLV endomorphism to split both scalars into
+     * ~128-bit halves and run a 4-scalar simultaneous multi-exponentiation.
+     * Otherwise falls back to Shamir's trick with JSF. Not constant-time --
+     * use only with public scalars (e.g. verification).
+     *
+     * @param p1 First point
+     * @param n1 First scalar
+     * @param p2 Second point
+     * @param n2 Second scalar
+     * @param curve Elliptic curve; enables GLV if curve.glvParams is set
+     * @return Point n1*p1 + n2*p2
+     */
+    public static Point multiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, Curve curve) {
+        if (curve.glvParams != null) {
+            return glvMultiplyAndAdd(p1, n1, p2, n2, curve);
+        }
+        return fromJacobian(
+            shamirMultiply(toJacobian(p1), n1, toJacobian(p2), n2, curve.N, curve.A, curve.P),
+            curve.P
         );
     }
 
@@ -439,6 +463,83 @@ public final class Math {
             return new Point(p.x, BigInteger.ZERO, p.z);
         }
         return new Point(p.x, P.subtract(p.y), p.z);
+    }
+
+    /**
+     * Compute n1*p1 + n2*p2 using the GLV endomorphism. Splits each 256-bit
+     * scalar into two ~128-bit scalars via k = k1 + k2*lambda (mod N), then
+     * runs a 4-scalar simultaneous double-and-add over (p1, phi(p1), p2, phi(p2))
+     * with a 16-entry precomputed table of subset sums. Halves the loop
+     * length versus the plain Shamir path.
+     */
+    static Point glvMultiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, Curve curve) {
+        Curve.GLVParams glv = curve.glvParams;
+        BigInteger N = curve.N, A = curve.A, P = curve.P;
+        BigInteger beta = glv.beta;
+
+        BigInteger[] d1 = glvDecompose(n1.mod(N), glv, N);
+        BigInteger[] d2 = glvDecompose(n2.mod(N), glv, N);
+        BigInteger k1 = d1[0], k2 = d1[1], k3 = d2[0], k4 = d2[1];
+
+        // Base points (affine, z=1) -- phi((x, y)) = (beta*x mod P, y).
+        Point[] bases = new Point[]{
+            new Point(p1.x, p1.y, BigInteger.ONE),
+            new Point(beta.multiply(p1.x).mod(P), p1.y, BigInteger.ONE),
+            new Point(p2.x, p2.y, BigInteger.ONE),
+            new Point(beta.multiply(p2.x).mod(P), p2.y, BigInteger.ONE),
+        };
+        BigInteger[] scalars = new BigInteger[]{k1, k2, k3, k4};
+        for (int i = 0; i < 4; i++) {
+            if (scalars[i].signum() < 0) {
+                scalars[i] = scalars[i].negate();
+                bases[i] = new Point(bases[i].x, P.subtract(bases[i].y), BigInteger.ONE);
+            }
+        }
+
+        // Precompute table[idx] = sum of bases[i] selected by bits of idx.
+        Point[] table = new Point[16];
+        table[0] = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        for (int idx = 1; idx < 16; idx++) {
+            int low = idx & -idx;
+            int i = Integer.numberOfTrailingZeros(low);
+            table[idx] = jacobianAdd(table[idx ^ low], bases[i], A, P);
+        }
+
+        int maxLen = 0;
+        for (BigInteger s : scalars) {
+            if (s.bitLength() > maxLen) {
+                maxLen = s.bitLength();
+            }
+        }
+        Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        BigInteger s0 = scalars[0], s1 = scalars[1], s2 = scalars[2], s3 = scalars[3];
+        for (int bit = maxLen - 1; bit >= 0; bit--) {
+            r = jacobianDouble(r, A, P);
+            int idx = (s0.testBit(bit) ? 1 : 0)
+                    | (s1.testBit(bit) ? 2 : 0)
+                    | (s2.testBit(bit) ? 4 : 0)
+                    | (s3.testBit(bit) ? 8 : 0);
+            if (idx != 0) {
+                r = jacobianAdd(r, table[idx], A, P);
+            }
+        }
+
+        return fromJacobian(r, P);
+    }
+
+    /**
+     * Decompose k into (k1, k2) with k = k1 + k2*lambda (mod N) and
+     * |k1|, |k2| ~ sqrt(N). Babai rounding against the precomputed basis
+     * {(a1, b1), (a2, b2)}; k1 and k2 may be negative.
+     */
+    static BigInteger[] glvDecompose(BigInteger k, Curve.GLVParams glv, BigInteger N) {
+        BigInteger a1 = glv.a1, b1 = glv.b1, a2 = glv.a2, b2 = glv.b2;
+        BigInteger halfN = N.shiftRight(1);
+        BigInteger c1 = b2.multiply(k).add(halfN).divide(N);
+        BigInteger c2 = b1.negate().multiply(k).add(halfN).divide(N);
+        BigInteger k1 = k.subtract(c1.multiply(a1)).subtract(c2.multiply(a2));
+        BigInteger k2 = c1.negate().multiply(b1).subtract(c2.multiply(b2));
+        return new BigInteger[]{k1, k2};
     }
 
     /**

@@ -9,6 +9,32 @@ import java.util.*;
  */
 public class Curve {
 
+    /**
+     * GLV endomorphism parameters for curves that support one (e.g. secp256k1).
+     * phi((x, y)) = (beta * x mod P, y) corresponds to lambda * P. Basis vectors
+     * (a1, b1), (a2, b2) from Gauss reduction used to split a 256-bit scalar k
+     * into two ~128-bit scalars (k1, k2) with k = k1 + k2*lambda (mod N).
+     */
+    public static final class GLVParams {
+        public final BigInteger beta;
+        public final BigInteger lambda;
+        public final BigInteger a1;
+        public final BigInteger b1;
+        public final BigInteger a2;
+        public final BigInteger b2;
+
+        public GLVParams(BigInteger beta, BigInteger lambda,
+                         BigInteger a1, BigInteger b1,
+                         BigInteger a2, BigInteger b2) {
+            this.beta = beta;
+            this.lambda = lambda;
+            this.a1 = a1;
+            this.b1 = b1;
+            this.a2 = a2;
+            this.b2 = b2;
+        }
+    }
+
     public BigInteger A;
     public BigInteger B;
     public BigInteger P;
@@ -18,6 +44,8 @@ public class Curve {
     public String name;
     public String nistName;
     public long[] oid;
+    // null means no endomorphism; fall back to Shamir + JSF.
+    public GLVParams glvParams;
 
     // Precomputed window table for fixed-base generator multiplication.
     // Lazily populated by Math.generatorTable and published via a volatile
@@ -50,6 +78,22 @@ public class Curve {
      * @param nistName nistName
      */
     public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid, String nistName) {
+        this(A, B, P, N, Gx, Gy, name, oid, nistName, null);
+    }
+
+    /**
+     * @param A A
+     * @param B B
+     * @param P P
+     * @param N N
+     * @param Gx Gx
+     * @param Gy Gy
+     * @param name name
+     * @param oid oid
+     * @param nistName nistName
+     * @param glvParams GLV endomorphism parameters, or null
+     */
+    public Curve(BigInteger A, BigInteger B, BigInteger P, BigInteger N, BigInteger Gx, BigInteger Gy, String name, long[] oid, String nistName, GLVParams glvParams) {
         this.A = A;
         this.B = B;
         this.P = P;
@@ -59,6 +103,7 @@ public class Curve {
         this.name = name;
         this.nistName = nistName;
         this.oid = oid;
+        this.glvParams = glvParams;
     }
 
     /**
@@ -117,7 +162,19 @@ public class Curve {
         new BigInteger("79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", 16),
         new BigInteger("483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8", 16),
         "secp256k1",
-        new long[]{1, 3, 132, 0, 10}
+        new long[]{1, 3, 132, 0, 10},
+        null,
+        // GLV endomorphism phi((x, y)) = (beta * x, y), equivalent to lambda * P.
+        // Basis vectors from Gauss reduction; used to split a 256-bit scalar k
+        // into two ~128-bit scalars (k1, k2) with k = k1 + k2 * lambda (mod N).
+        new GLVParams(
+            new BigInteger("7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee", 16),
+            new BigInteger("5363ad4cc05c30e0a5261c028812645a122e22ea20816678df02967c1b23bd72", 16),
+            new BigInteger("3086d221a7d46bcde86c90e49284eb15", 16),
+            new BigInteger("-e4437ed6010e88286f547fa90abfe4c3", 16),
+            new BigInteger("114ca50f7a8e2f3f657c1108d9d44cfd8", 16),
+            new BigInteger("3086d221a7d46bcde86c90e49284eb15", 16)
+        )
     );
 
     public static final Curve prime256v1 = new Curve(

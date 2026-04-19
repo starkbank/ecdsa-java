@@ -93,7 +93,7 @@ public class Ecdsa {
         Point v = Math.multiplyAndAdd(
             curve.G, numberMessage.multiply(inv).mod(curve.N),
             publicKey.point, r.multiply(inv).mod(curve.N),
-            curve.N, curve.A, curve.P
+            curve
         );
         if (v.isAtInfinity()) {
             return false;

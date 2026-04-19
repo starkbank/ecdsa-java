@@ -284,12 +284,21 @@ public final class Math {
         BigInteger px = p.x, py = p.y, pz = p.z;
         BigInteger qx = q.x, qy = q.y, qz = q.z;
 
-        BigInteger qz2 = qz.multiply(qz).mod(P);
         BigInteger pz2 = pz.multiply(pz).mod(P);
-        BigInteger U1 = px.multiply(qz2).mod(P);
         BigInteger U2 = qx.multiply(pz2).mod(P);
-        BigInteger S1 = py.multiply(qz2).multiply(qz).mod(P);
         BigInteger S2 = qy.multiply(pz2).multiply(pz).mod(P);
+
+        BigInteger U1, S1;
+        boolean qzIsOne = qz.equals(BigInteger.ONE);
+        if (qzIsOne) {
+            // Mixed affine+Jacobian add: qz^2 = qz^3 = 1 saves four multiplications.
+            U1 = px;
+            S1 = py;
+        } else {
+            BigInteger qz2 = qz.multiply(qz).mod(P);
+            U1 = px.multiply(qz2).mod(P);
+            S1 = py.multiply(qz2).multiply(qz).mod(P);
+        }
 
         if (U1.equals(U2)) {
             if (!S1.equals(S2)) {
@@ -305,7 +314,7 @@ public final class Math {
         BigInteger U1H2 = U1.multiply(H2).mod(P);
         BigInteger nx = R.multiply(R).subtract(H3).subtract(TWO.multiply(U1H2)).mod(P);
         BigInteger ny = R.multiply(U1H2.subtract(nx)).subtract(S1.multiply(H3)).mod(P);
-        BigInteger nz = H.multiply(pz).multiply(qz).mod(P);
+        BigInteger nz = qzIsOne ? H.multiply(pz).mod(P) : H.multiply(pz).multiply(qz).mod(P);
         return new Point(nx, ny, nz);
     }
 

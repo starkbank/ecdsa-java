@@ -9,10 +9,6 @@ public final class Math {
     private static final BigInteger FOUR = BigInteger.valueOf(4);
     private static final BigInteger EIGHT = BigInteger.valueOf(8);
 
-    private static final int GENERATOR_WINDOW_BITS = 4;
-    private static final int GENERATOR_WINDOW_SIZE = 1 << GENERATOR_WINDOW_BITS;
-    private static final int GENERATOR_WINDOW_MASK = GENERATOR_WINDOW_SIZE - 1;
-
     /**
      * Tonelli-Shanks algorithm for modular square root. Works for all odd primes.
      *
@@ -139,12 +135,13 @@ public final class Math {
     }
 
     /**
-     * Fast scalar multiplication n*G where G is the curve generator, using
-     * a precomputed window table (2^w-ary method). Roughly 2-3x faster
-     * than variable-base multiplication because doublings stay cheap and
-     * additions use pre-stored multiples of G.
+     * Fast scalar multiplication n*G using a precomputed affine table of
+     * powers-of-two multiples of G and the width-2 NAF of n. Every non-zero
+     * NAF digit triggers one mixed add and zero doublings, trading the ~256
+     * doublings of a windowed method for ~86 adds on average -- a large net
+     * reduction in field multiplications for 256-bit scalars.
      *
-     * @param curve Elliptic curve whose generator G is multiplied
+     * @param curve Elliptic curve with generator G
      * @param n Scalar multiplier
      * @return Point n*G
      */
@@ -157,36 +154,38 @@ public final class Math {
         }
 
         Point[] table = generatorTable(curve);
-        int w = GENERATOR_WINDOW_BITS;
         BigInteger A = curve.A;
         BigInteger P = curve.P;
 
-        // Jacobian infinity (y=0 triggers early-return in jacobianAdd)
         Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
-        int startBit = ((curve.nBitLength - 1) / w) * w;
-        for (int bit = startBit; bit >= 0; bit -= w) {
-            for (int j = 0; j < w; j++) {
-                r = jacobianDouble(r, A, P);
+        int i = 0;
+        BigInteger k = n;
+        while (k.signum() > 0) {
+            if (k.testBit(0)) {
+                // Low two bits of k: 1 -> digit +1, 3 -> digit -1.
+                int low2 = (k.testBit(1) ? 2 : 0) | 1;
+                int digit = 2 - low2;  // +1 or -1
+                k = digit == 1 ? k.subtract(BigInteger.ONE) : k.add(BigInteger.ONE);
+                Point g = table[i];
+                if (digit == 1) {
+                    r = jacobianAdd(r, g, A, P);
+                } else {
+                    r = jacobianAdd(r, new Point(g.x, P.subtract(g.y), BigInteger.ONE), A, P);
+                }
             }
-            int window = 0;
-            for (int j = w - 1; j >= 0; j--) {
-                window = (window << 1) | (n.testBit(bit + j) ? 1 : 0);
-            }
-            window &= GENERATOR_WINDOW_MASK;
-            if (window != 0) {
-                r = jacobianAdd(r, table[window], A, P);
-            }
+            k = k.shiftRight(1);
+            i++;
         }
         return fromJacobian(r, P);
     }
 
     /**
-     * Lazily build and cache the precomputed window table
-     * [infinity, G, 2G, ..., (2^w - 1) G] in Jacobian coordinates on the
-     * given curve. Idempotent: repeated calls return the same array.
+     * Build [G, 2G, 4G, ..., 2^nBitLength * G] in affine (z=1) form, so each
+     * add in multiplyGenerator hits the mixed-add fast path. Idempotent:
+     * repeated calls return the same array.
      *
      * @param curve Elliptic curve whose generator is tabulated
-     * @return Window table of Jacobian points
+     * @return Powers-of-two table of affine points
      */
     static Point[] generatorTable(Curve curve) {
         Point[] cached = curve.generatorTable;
@@ -195,12 +194,25 @@ public final class Math {
         }
         BigInteger A = curve.A;
         BigInteger P = curve.P;
-        Point G = new Point(curve.G.x, curve.G.y, BigInteger.ONE);
-        Point[] table = new Point[GENERATOR_WINDOW_SIZE];
-        table[0] = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
-        table[1] = G;
-        for (int i = 2; i < GENERATOR_WINDOW_SIZE; i++) {
-            table[i] = jacobianAdd(table[i - 1], G, A, P);
+        Point current = new Point(curve.G.x, curve.G.y, BigInteger.ONE);
+        // NAF of an nBitLength-bit scalar can be up to nBitLength+1 digits.
+        Point[] table = new Point[curve.nBitLength + 1];
+        table[0] = current;
+        for (int i = 1; i <= curve.nBitLength; i++) {
+            Point doubled = jacobianDouble(current, A, P);
+            if (doubled.y.equals(BigInteger.ZERO)) {
+                current = doubled;
+            } else {
+                BigInteger zInv = inv(doubled.z, P);
+                BigInteger zInv2 = zInv.multiply(zInv).mod(P);
+                BigInteger zInv3 = zInv2.multiply(zInv).mod(P);
+                current = new Point(
+                    doubled.x.multiply(zInv2).mod(P),
+                    doubled.y.multiply(zInv3).mod(P),
+                    BigInteger.ONE
+                );
+            }
+            table[i] = current;
         }
         curve.generatorTable = table;
         return table;

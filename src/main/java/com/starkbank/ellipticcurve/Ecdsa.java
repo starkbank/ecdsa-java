@@ -1,33 +1,55 @@
 package com.starkbank.ellipticcurve;
-import com.starkbank.ellipticcurve.utils.BinaryAscii;
 import com.starkbank.ellipticcurve.utils.RandomInteger;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Iterator;
 
 
 public class Ecdsa {
 
     /**
+     * Sign a message using the private key with a specified hash function.
      *
      * @param message message
      * @param privateKey privateKey
      * @param hashfunc hashfunc
      * @return Signature
      */
-
     public static Signature sign(String message, PrivateKey privateKey, MessageDigest hashfunc) {
-        byte[] hashMessage = hashfunc.digest(message.getBytes());
-        BigInteger numberMessage = BinaryAscii.numberFromString(hashMessage);
         Curve curve = privateKey.curve;
-        BigInteger randNum = RandomInteger.between(BigInteger.ONE, curve.N);
-        Point randomSignPoint = Math.multiply(curve.G, randNum, curve.N, curve.A, curve.P);
-        BigInteger r = randomSignPoint.x.mod(curve.N);
-        BigInteger s = ((numberMessage.add(r.multiply(privateKey.secret))).multiply(Math.inv(randNum, curve.N))).mod(curve.N);
-        return new Signature(r, s);
+        byte[] byteMessage = hashfunc.digest(message.getBytes(StandardCharsets.UTF_8));
+        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.nBitLength);
+
+        String hmacAlgorithm = getHmacAlgorithm(hashfunc.getAlgorithm());
+        Iterator<BigInteger> kIterator = RandomInteger.rfc6979(byteMessage, privateKey.secret, curve, hmacAlgorithm);
+
+        BigInteger r = BigInteger.ZERO, s = BigInteger.ZERO;
+        Point randSignPoint = null;
+        while (r.equals(BigInteger.ZERO) || s.equals(BigInteger.ZERO)) {
+            BigInteger randNum = kIterator.next();
+            randSignPoint = Math.multiplyGenerator(curve, randNum);
+            r = randSignPoint.x.mod(curve.N);
+            s = numberMessage.add(r.multiply(privateKey.secret)).multiply(Math.inv(randNum, curve.N)).mod(curve.N);
+        }
+
+        int recoveryId = randSignPoint.y.testBit(0) ? 1 : 0;
+        if (randSignPoint.y.compareTo(curve.N) > 0) {
+            recoveryId += 2;
+        }
+        // Low-S normalization
+        BigInteger halfN = curve.N.shiftRight(1);
+        if (s.compareTo(halfN) > 0) {
+            s = curve.N.subtract(s);
+            recoveryId ^= 1;
+        }
+
+        return new Signature(r, s, recoveryId);
     }
 
     /**
+     * Sign a message using the private key with SHA-256.
      *
      * @param message message
      * @param privateKey privateKey
@@ -42,6 +64,7 @@ public class Ecdsa {
     }
 
     /**
+     * Verify a signature against a message and public key with a specified hash function.
      *
      * @param message message
      * @param signature signature
@@ -50,29 +73,28 @@ public class Ecdsa {
      * @return boolean
      */
     public static boolean verify(String message, Signature signature, PublicKey publicKey, MessageDigest hashfunc) {
-        byte[] hashMessage = hashfunc.digest(message.getBytes());
-        BigInteger numberMessage = BinaryAscii.numberFromString(hashMessage);
         Curve curve = publicKey.curve;
+        byte[] byteMessage = hashfunc.digest(message.getBytes(StandardCharsets.UTF_8));
+        BigInteger numberMessage = RandomInteger.numberFromByteString(byteMessage, curve.nBitLength);
         BigInteger r = signature.r;
         BigInteger s = signature.s;
 
-        if (r.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+        if (r.compareTo(BigInteger.ONE) < 0 || r.compareTo(curve.N.subtract(BigInteger.ONE)) > 0) {
             return false;
         }
-        if (r.compareTo(curve.N) >= 0) {
+        if (s.compareTo(BigInteger.ONE) < 0 || s.compareTo(curve.N.subtract(BigInteger.ONE)) > 0) {
             return false;
         }
-        if (s.compareTo(new BigInteger(String.valueOf(1))) < 0) {
+        if (!curve.contains(publicKey.point)) {
             return false;
         }
-        if (s.compareTo(curve.N) >= 0) {
-            return false;
-        }
-        
-        BigInteger w = Math.inv(s, curve.N);
-        Point u1 =Math.multiply(curve.G, numberMessage.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);
-        Point u2 = Math.multiply(publicKey.point, r.multiply(w).mod(curve.N), curve.N, curve.A, curve.P);
-        Point v = Math.add(u1, u2, curve.A, curve.P);
+
+        BigInteger inv = Math.inv(s, curve.N);
+        Point v = Math.multiplyAndAdd(
+            curve.G, numberMessage.multiply(inv).mod(curve.N),
+            publicKey.point, r.multiply(inv).mod(curve.N),
+            curve
+        );
         if (v.isAtInfinity()) {
             return false;
         }
@@ -80,7 +102,8 @@ public class Ecdsa {
     }
 
     /**
-     * 
+     * Verify a signature against a message and public key with SHA-256.
+     *
      * @param message message
      * @param signature signature
      * @param publicKey publicKey
@@ -92,5 +115,14 @@ public class Ecdsa {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("Could not find SHA-256 message digest in provided java environment");
         }
+    }
+
+    /**
+     * Convert a MessageDigest algorithm name to the corresponding HMAC algorithm name.
+     */
+    private static String getHmacAlgorithm(String digestAlgorithm) {
+        // MessageDigest names like "SHA-256" -> "HmacSHA256"
+        String normalized = digestAlgorithm.replace("-", "");
+        return "Hmac" + normalized;
     }
 }

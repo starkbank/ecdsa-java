@@ -6,7 +6,6 @@ import java.util.Arrays;
 public final class BinaryAscii {
 
     /**
-     *
      * @param string byteString
      * @return String
      */
@@ -15,13 +14,11 @@ public final class BinaryAscii {
     }
 
     /**
-     *
      * @param bytes byte[]
      * @return String
      */
     public static String hexFromBinary(byte[] bytes) {
         StringBuilder hexString = new StringBuilder();
-
         for (byte aByte : bytes) {
             String hex = Integer.toHexString(0xFF & aByte);
             if (hex.length() == 1) {
@@ -33,21 +30,23 @@ public final class BinaryAscii {
     }
 
     /**
-     *
      * @param string string
      * @return byte[]
      */
     public static byte[] binaryFromHex(String string) {
-        byte[] bytes = new BigInteger(string, 16).toByteArray();
-        int i = 0;
-        while (i < bytes.length && bytes[i] == 0) {
-            i++;
+        if (string.length() % 2 != 0) {
+            string = "0" + string;
         }
-        return Arrays.copyOfRange(bytes, i, bytes.length);
+        int len = string.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(string.charAt(i), 16) << 4)
+                    + Character.digit(string.charAt(i + 1), 16));
+        }
+        return data;
     }
 
     /**
-     *
      * @param c c
      * @return byte[]
      */
@@ -56,25 +55,25 @@ public final class BinaryAscii {
     }
 
     /**
-     * Get a number representation of a string
+     * Get a number representation of a byte array
      *
-     * @param string String to be converted in a number
-     * @return Number in hex from string
+     * @param string byte[] to be converted to a number
+     * @return BigInteger
      */
     public static BigInteger numberFromString(byte[] string) {
-        return new BigInteger(BinaryAscii.hexFromBinary(string), 16);
+        return new BigInteger(1, string);
     }
 
     /**
      * Get a string representation of a number
      *
      * @param number number to be converted in a string
-     * @param length length max number of character for the string
-     * @return hexadecimal string
+     * @param length length max number of bytes for the string
+     * @return ByteString
      */
     public static ByteString stringFromNumber(BigInteger number, int length) {
         String fmtStr = "%0" + String.valueOf(2 * length) + "x";
         String hexString = String.format(fmtStr, number);
-        return new ByteString(BinaryAscii.binaryFromHex(hexString));
+        return new ByteString(binaryFromHex(hexString));
     }
 }

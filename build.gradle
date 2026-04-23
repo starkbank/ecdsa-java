@@ -3,104 +3,41 @@ plugins {
 }
 
 group 'com.starkbank.ellipticcurve'
-version '1.0.2'
+version '2.0.0'
 
-sourceCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
 }
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile group: 'org.mockito', name: 'mockito-core', version: '2.22.0'
+    testImplementation 'junit:junit:4.13.2'
 }
 
-apply plugin: 'maven'
-apply plugin: 'signing'
+test {
+    testLogging {
+        events "passed", "failed", "skipped"
+        showExceptions true
+        showCauses true
+        showStackTraces true
+        exceptionFormat "full"
+    }
+}
 
 archivesBaseName = "starkbank-ecdsa"
 
 
 task javadocJar(type: Jar) {
-    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
     from javadoc
 }
 
 task sourcesJar(type: Jar) {
-    classifier = 'sources'
+    archiveClassifier = 'sources'
     from sourceSets.main.allSource
 }
 
 artifacts {
     archives javadocJar, sourcesJar
-}
-
-signing {
-    sign configurations.archives
-}
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(
-                        userName: project.hasProperty('ossrhUsername') ? project.property('ossrhUsername') : 'username',
-                        password: project.hasProperty('ossrhPassword') ? project.property('ossrhPassword') : 'password'
-                )
-            }
-
-            snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                authentication(
-                        userName: project.hasProperty('ossrhUsername') ? project.property('ossrhUsername') : 'username',
-                        password: project.hasProperty('ossrhPassword') ? project.property('ossrhPassword') : 'password'
-                )
-            }
-
-            pom.project {
-                name 'StarkBank ECDSA library'
-                packaging 'jar'
-                // optionally artifactId can be defined here
-                description 'Pure Java ECDSA library by Stark Bank'
-                url 'https://github.com/starkbank/ecdsa-java'
-
-                scm {
-                    connection 'scm:git:git://github.com/starkbank/ecdsa-java.git'
-                    developerConnection 'scm:git:ssh://github.com/starkbank/ecdsa-java.git'
-                    url 'https://github.com/starkbank/ecdsa-java/'
-                }
-
-                licenses {
-                    license {
-                        name 'MIT License'
-                        url 'https://github.com/starkbank/sdk-java/blob/master/LICENSE'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id 'rcmstark'
-                        name 'Rafael Stark'
-                        email 'rafael@starkbank.com'
-                    }
-                    developer {
-                        id 'daltonmenezes'
-                        name 'Dalton Menezes'
-                        email 'dalton.menezes@starkbank.com'
-                    }
-                    developer {
-                        id 'cdottori'
-                        name 'Caio Dottori'
-                        email 'caio.dottori@starkbank.com'
-                    }
-                    developer {
-                        id 'thalesmello'
-                        name 'Thales Mello'
-                        email 'thalesmello@gmail.com'
-                    }
-                }
-            }
-        }
-    }
 }

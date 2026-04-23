@@ -4,15 +4,82 @@ import java.math.BigInteger;
 
 public final class Math {
 
+    private static final BigInteger TWO = BigInteger.valueOf(2);
+    private static final BigInteger THREE = BigInteger.valueOf(3);
+    private static final BigInteger FOUR = BigInteger.valueOf(4);
+    private static final BigInteger EIGHT = BigInteger.valueOf(8);
+
+    /**
+     * Tonelli-Shanks algorithm for modular square root. Works for all odd primes.
+     *
+     * @param value the value to compute the square root of
+     * @param prime the prime modulus
+     * @return the modular square root
+     */
+    public static BigInteger modularSquareRoot(BigInteger value, BigInteger prime) {
+        if (value.equals(BigInteger.ZERO)) {
+            return BigInteger.ZERO;
+        }
+        if (prime.equals(TWO)) {
+            return value.mod(TWO);
+        }
+
+        // Factor out powers of 2: prime - 1 = Q * 2^S
+        BigInteger Q = prime.subtract(BigInteger.ONE);
+        int S = 0;
+        while (Q.mod(TWO).equals(BigInteger.ZERO)) {
+            Q = Q.divide(TWO);
+            S++;
+        }
+
+        if (S == 1) {
+            // prime = 3 (mod 4) fast path
+            return value.modPow(prime.add(BigInteger.ONE).divide(FOUR), prime);
+        }
+
+        // Find a quadratic non-residue z
+        BigInteger z = TWO;
+        BigInteger primeMinusOne = prime.subtract(BigInteger.ONE);
+        BigInteger halfPrimeMinusOne = primeMinusOne.divide(TWO);
+        while (!z.modPow(halfPrimeMinusOne, prime).equals(primeMinusOne)) {
+            z = z.add(BigInteger.ONE);
+        }
+
+        int M = S;
+        BigInteger c = z.modPow(Q, prime);
+        BigInteger t = value.modPow(Q, prime);
+        BigInteger R = value.modPow(Q.add(BigInteger.ONE).divide(TWO), prime);
+
+        while (true) {
+            if (t.equals(BigInteger.ONE)) {
+                return R;
+            }
+
+            // Find the least i such that t^(2^i) = 1 (mod prime)
+            int i = 1;
+            BigInteger temp = t.multiply(t).mod(prime);
+            while (!temp.equals(BigInteger.ONE)) {
+                temp = temp.multiply(temp).mod(prime);
+                i++;
+            }
+
+            BigInteger b = c.modPow(BigInteger.ONE.shiftLeft(M - i - 1), prime);
+            M = i;
+            c = b.multiply(b).mod(prime);
+            t = t.multiply(c).mod(prime);
+            R = R.multiply(b).mod(prime);
+        }
+    }
+
     /**
      * Fast way to multiply point and scalar in elliptic curves
      *
      * @param p First Point to multiply
      * @param n Scalar to multiply
      * @param N Order of the elliptic curve
-     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
-     * @return Point that represents the sum of First and Second Point
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @return Point that represents the scalar multiplication
      */
     public static Point multiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
         return fromJacobian(jacobianMultiply(toJacobian(p), n, N, A, P), P);
@@ -27,37 +94,152 @@ public final class Math {
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
-
     public static Point add(Point p, Point q, BigInteger A, BigInteger P) {
         return fromJacobian(jacobianAdd(toJacobian(p), toJacobian(q), A, P), P);
     }
 
     /**
-     * Extended Euclidean Algorithm. It's the 'division' in elliptic curves
+     * Compute n1*p1 + n2*p2 using Shamir's trick with JSF.
+     * Not constant-time -- use only with public scalars (e.g. verification).
      *
-     * @param x Divisor
+     * @param p1 First point
+     * @param n1 First scalar
+     * @param p2 Second point
+     * @param n2 Second scalar
+     * @param N Order of the elliptic curve
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @return Point n1*p1 + n2*p2
+     */
+    public static Point multiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, BigInteger N, BigInteger A, BigInteger P) {
+        return fromJacobian(
+            shamirMultiply(toJacobian(p1), n1, toJacobian(p2), n2, N, A, P),
+            P
+        );
+    }
+
+    /**
+     * Compute n1*p1 + n2*p2. If the curve exposes GLV parameters (e.g.
+     * secp256k1), uses the GLV endomorphism to split both scalars into
+     * ~128-bit halves and run a 4-scalar simultaneous multi-exponentiation.
+     * Otherwise falls back to Shamir's trick with JSF. Not constant-time --
+     * use only with public scalars (e.g. verification).
+     *
+     * @param p1 First point
+     * @param n1 First scalar
+     * @param p2 Second point
+     * @param n2 Second scalar
+     * @param curve Elliptic curve; enables GLV if curve.glvParams is set
+     * @return Point n1*p1 + n2*p2
+     */
+    public static Point multiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, Curve curve) {
+        if (curve.glvParams != null) {
+            return glvMultiplyAndAdd(p1, n1, p2, n2, curve);
+        }
+        return fromJacobian(
+            shamirMultiply(toJacobian(p1), n1, toJacobian(p2), n2, curve.N, curve.A, curve.P),
+            curve.P
+        );
+    }
+
+    /**
+     * Modular inverse via the extended Euclidean algorithm
+     * (BigInteger.modInverse). Roughly 2-3x faster than Fermat's little
+     * theorem for 256-bit operands.
+     *
+     * @param x Divisor (must be coprime to n)
      * @param n Mod for division
-     * @return Value representing the division
+     * @return Value representing the modular inverse
      */
     public static BigInteger inv(BigInteger x, BigInteger n) {
-        if (x.compareTo(BigInteger.ZERO) == 0) {
-            return BigInteger.ZERO;
+        if (x.mod(n).equals(BigInteger.ZERO)) {
+            throw new ArithmeticException("0 has no modular inverse");
         }
-        BigInteger lm = BigInteger.ONE;
-        BigInteger hm = BigInteger.ZERO;
-        BigInteger high = n;
-        BigInteger low = x.mod(n);
-        BigInteger r, nm, nw;
-        while (low.compareTo(BigInteger.ONE) > 0) {
-            r = high.divide(low);
-            nm = hm.subtract(lm.multiply(r));
-            nw = high.subtract(low.multiply(r));
-            high = low;
-            hm = lm;
-            low = nw;
-            lm = nm;
+        return x.modInverse(n);
+    }
+
+    /**
+     * Fast scalar multiplication n*G using a precomputed affine table of
+     * powers-of-two multiples of G and the width-2 NAF of n. Every non-zero
+     * NAF digit triggers one mixed add and zero doublings, trading the ~256
+     * doublings of a windowed method for ~86 adds on average -- a large net
+     * reduction in field multiplications for 256-bit scalars.
+     *
+     * @param curve Elliptic curve with generator G
+     * @param n Scalar multiplier
+     * @return Point n*G
+     */
+    public static Point multiplyGenerator(Curve curve, BigInteger n) {
+        if (n.signum() < 0 || n.compareTo(curve.N) >= 0) {
+            n = n.mod(curve.N);
         }
-        return lm.mod(n);
+        if (n.equals(BigInteger.ZERO)) {
+            return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
+        }
+
+        Point[] table = generatorTable(curve);
+        BigInteger A = curve.A;
+        BigInteger P = curve.P;
+
+        Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        int i = 0;
+        BigInteger k = n;
+        while (k.signum() > 0) {
+            if (k.testBit(0)) {
+                // Low two bits of k: 1 -> digit +1, 3 -> digit -1.
+                int low2 = (k.testBit(1) ? 2 : 0) | 1;
+                int digit = 2 - low2;  // +1 or -1
+                k = digit == 1 ? k.subtract(BigInteger.ONE) : k.add(BigInteger.ONE);
+                Point g = table[i];
+                if (digit == 1) {
+                    r = jacobianAdd(r, g, A, P);
+                } else {
+                    r = jacobianAdd(r, new Point(g.x, P.subtract(g.y), BigInteger.ONE), A, P);
+                }
+            }
+            k = k.shiftRight(1);
+            i++;
+        }
+        return fromJacobian(r, P);
+    }
+
+    /**
+     * Build [G, 2G, 4G, ..., 2^nBitLength * G] in affine (z=1) form, so each
+     * add in multiplyGenerator hits the mixed-add fast path. Idempotent:
+     * repeated calls return the same array.
+     *
+     * @param curve Elliptic curve whose generator is tabulated
+     * @return Powers-of-two table of affine points
+     */
+    static Point[] generatorTable(Curve curve) {
+        Point[] cached = curve.generatorTable;
+        if (cached != null) {
+            return cached;
+        }
+        BigInteger A = curve.A;
+        BigInteger P = curve.P;
+        Point current = new Point(curve.G.x, curve.G.y, BigInteger.ONE);
+        // NAF of an nBitLength-bit scalar can be up to nBitLength+1 digits.
+        Point[] table = new Point[curve.nBitLength + 1];
+        table[0] = current;
+        for (int i = 1; i <= curve.nBitLength; i++) {
+            Point doubled = jacobianDouble(current, A, P);
+            if (doubled.y.equals(BigInteger.ZERO)) {
+                current = doubled;
+            } else {
+                BigInteger zInv = inv(doubled.z, P);
+                BigInteger zInv2 = zInv.multiply(zInv).mod(P);
+                BigInteger zInv3 = zInv2.multiply(zInv).mod(P);
+                current = new Point(
+                    doubled.x.multiply(zInv2).mod(P),
+                    doubled.y.multiply(zInv3).mod(P),
+                    BigInteger.ONE
+                );
+            }
+            table[i] = current;
+        }
+        curve.generatorTable = table;
+        return table;
     }
 
     /**
@@ -66,8 +248,7 @@ public final class Math {
      * @param p the point you want to transform
      * @return Point in Jacobian coordinates
      */
-    public static Point toJacobian(Point p) {
-
+    static Point toJacobian(Point p) {
         return new Point(p.x, p.y, BigInteger.ONE);
     }
 
@@ -78,7 +259,10 @@ public final class Math {
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point in default coordinates
      */
-    public static Point fromJacobian(Point p, BigInteger P) {
+    static Point fromJacobian(Point p, BigInteger P) {
+        if (p.y.equals(BigInteger.ZERO)) {
+            return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
+        }
         BigInteger z = inv(p.z, P);
         BigInteger x = p.x.multiply(z.pow(2)).mod(P);
         BigInteger y = p.y.multiply(z.pow(3)).mod(P);
@@ -88,21 +272,32 @@ public final class Math {
     /**
      * Double a point in elliptic curves
      *
-     * @param p the point you want to transform
+     * @param p the point you want to double
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
-     * @return the result point doubled in elliptic curves
+     * @return the result point doubled
      */
-    public static Point jacobianDouble(Point p, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
+    static Point jacobianDouble(Point p, BigInteger A, BigInteger P) {
+        if (p.y.equals(BigInteger.ZERO)) {
             return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO);
         }
-        BigInteger ysq = p.y.pow(2).mod(P);
-        BigInteger S = BigInteger.valueOf(4).multiply(p.x).multiply(ysq).mod(P);
-        BigInteger M = BigInteger.valueOf(3).multiply(p.x.pow(2)).add(A.multiply(p.z.pow(4))).mod(P);
-        BigInteger nx = M.pow(2).subtract(BigInteger.valueOf(2).multiply(S)).mod(P);
-        BigInteger ny = M.multiply(S.subtract(nx)).subtract(BigInteger.valueOf(8).multiply(ysq.pow(2))).mod(P);
-        BigInteger nz = BigInteger.valueOf(2).multiply(p.y).multiply(p.z).mod(P);
+        BigInteger px = p.x, py = p.y, pz = p.z;
+        BigInteger ysq = py.multiply(py).mod(P);
+        BigInteger S = FOUR.multiply(px).multiply(ysq).mod(P);
+        BigInteger pz2 = pz.multiply(pz).mod(P);
+        BigInteger M;
+        if (A.signum() == 0) {
+            // A = 0 (secp256k1): skip A*pz^4 term
+            M = THREE.multiply(px).multiply(px).mod(P);
+        } else if (A.equals(P.subtract(THREE))) {
+            // A = -3 (prime256v1): M = 3*(px - pz^2)*(px + pz^2)
+            M = THREE.multiply(px.subtract(pz2)).multiply(px.add(pz2)).mod(P);
+        } else {
+            M = THREE.multiply(px).multiply(px).add(A.multiply(pz2).multiply(pz2)).mod(P);
+        }
+        BigInteger nx = M.multiply(M).subtract(TWO.multiply(S)).mod(P);
+        BigInteger ny = M.multiply(S.subtract(nx)).subtract(EIGHT.multiply(ysq).multiply(ysq)).mod(P);
+        BigInteger nz = TWO.multiply(py).multiply(pz).mod(P);
         return new Point(nx, ny, nz);
     }
 
@@ -115,60 +310,282 @@ public final class Math {
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
      * @return Point that represents the sum of First and Second Point
      */
-    public static Point jacobianAdd(Point p, Point q, BigInteger A, BigInteger P) {
-        if (p.y == null || p.y.equals(BigInteger.ZERO)) {
+    static Point jacobianAdd(Point p, Point q, BigInteger A, BigInteger P) {
+        if (p.y.equals(BigInteger.ZERO)) {
             return q;
         }
-        if (q.y == null || q.y.equals(BigInteger.ZERO)) {
+        if (q.y.equals(BigInteger.ZERO)) {
             return p;
         }
-        BigInteger U1 = p.x.multiply(q.z.pow(2)).mod(P);
-        BigInteger U2 = q.x.multiply(p.z.pow(2)).mod(P);
-        BigInteger S1 = p.y.multiply(q.z.pow(3)).mod(P);
-        BigInteger S2 = q.y.multiply(p.z.pow(3)).mod(P);
-        if (U1.compareTo(U2) == 0) {
-            if (S1.compareTo(S2) != 0) {
+        BigInteger px = p.x, py = p.y, pz = p.z;
+        BigInteger qx = q.x, qy = q.y, qz = q.z;
+
+        BigInteger pz2 = pz.multiply(pz).mod(P);
+        BigInteger U2 = qx.multiply(pz2).mod(P);
+        BigInteger S2 = qy.multiply(pz2).multiply(pz).mod(P);
+
+        BigInteger U1, S1;
+        boolean qzIsOne = qz.equals(BigInteger.ONE);
+        if (qzIsOne) {
+            // Mixed affine+Jacobian add: qz^2 = qz^3 = 1 saves four multiplications.
+            U1 = px;
+            S1 = py;
+        } else {
+            BigInteger qz2 = qz.multiply(qz).mod(P);
+            U1 = px.multiply(qz2).mod(P);
+            S1 = py.multiply(qz2).multiply(qz).mod(P);
+        }
+
+        if (U1.equals(U2)) {
+            if (!S1.equals(S2)) {
                 return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
             }
             return jacobianDouble(p, A, P);
         }
+
         BigInteger H = U2.subtract(U1);
         BigInteger R = S2.subtract(S1);
         BigInteger H2 = H.multiply(H).mod(P);
         BigInteger H3 = H.multiply(H2).mod(P);
         BigInteger U1H2 = U1.multiply(H2).mod(P);
-        BigInteger nx = R.pow(2).subtract(H3).subtract(BigInteger.valueOf(2).multiply(U1H2)).mod(P);
+        BigInteger nx = R.multiply(R).subtract(H3).subtract(TWO.multiply(U1H2)).mod(P);
         BigInteger ny = R.multiply(U1H2.subtract(nx)).subtract(S1.multiply(H3)).mod(P);
-        BigInteger nz = H.multiply(p.z).multiply(q.z).mod(P);
+        BigInteger nz = qzIsOne ? H.multiply(pz).mod(P) : H.multiply(pz).multiply(qz).mod(P);
         return new Point(nx, ny, nz);
     }
 
     /**
-     * Multiply point and scalar in elliptic curves
+     * Multiply point and scalar in elliptic curves using Montgomery ladder
+     * for constant-time execution.
      *
      * @param p First Point to multiply
      * @param n Scalar to multiply
      * @param N Order of the elliptic curve
      * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
      * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
-     * @return Point that represents the product of First Point and scalar
+     * @return Point that represents the scalar multiplication
      */
-    public static Point jacobianMultiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
-        if (BigInteger.ZERO.compareTo(p.y) == 0 || BigInteger.ZERO.compareTo(n) == 0) {
+    static Point jacobianMultiply(Point p, BigInteger n, BigInteger N, BigInteger A, BigInteger P) {
+        if (p.y.equals(BigInteger.ZERO) || n.equals(BigInteger.ZERO)) {
             return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
         }
-        if (BigInteger.ONE.compareTo(n) == 0) {
-            return p;
+
+        if (n.signum() < 0 || n.compareTo(N) >= 0) {
+            n = n.mod(N);
         }
-        if (n.compareTo(BigInteger.ZERO) < 0 || n.compareTo(N) >= 0) {
-            return jacobianMultiply(p, n.mod(N), N, A, P);
+
+        if (n.equals(BigInteger.ZERO)) {
+            return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
         }
-        if (n.mod(BigInteger.valueOf(2)).compareTo(BigInteger.ZERO) == 0) {
-            return jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.valueOf(2)), N, A, P), A, P);
+
+        // Montgomery ladder: always performs one add and one double per bit
+        Point r0 = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        Point r1 = new Point(p.x, p.y, p.z);
+
+        for (int i = n.bitLength() - 1; i >= 0; i--) {
+            if (!n.testBit(i)) {
+                r1 = jacobianAdd(r0, r1, A, P);
+                r0 = jacobianDouble(r0, A, P);
+            } else {
+                r0 = jacobianAdd(r0, r1, A, P);
+                r1 = jacobianDouble(r1, A, P);
+            }
         }
-        if (n.mod(BigInteger.valueOf(2)).compareTo(BigInteger.ONE) == 0) {
-            return jacobianAdd(jacobianDouble(jacobianMultiply(p, n.divide(BigInteger.valueOf(2)), N, A, P), A, P), p, A, P);
+
+        return r0;
+    }
+
+    /**
+     * Compute n1*p1 + n2*p2 using Shamir's trick with Joint Sparse Form
+     * (Solinas 2001). JSF picks signed digits in {-1, 0, 1} so at most ~l/2
+     * digit pairs are non-zero, versus ~3l/4 for the raw binary form. Not
+     * constant-time -- use only with public scalars (e.g. verification).
+     *
+     * @param jp1 First point in Jacobian coordinates
+     * @param n1 First scalar
+     * @param jp2 Second point in Jacobian coordinates
+     * @param n2 Second scalar
+     * @param N Order of the elliptic curve
+     * @param A Coefficient of the first-order term of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @param P Prime number in the module of the equation Y^2 = X^3 + A*X + B (mod P)
+     * @return Point n1*p1 + n2*p2 in Jacobian coordinates
+     */
+    static Point shamirMultiply(Point jp1, BigInteger n1, Point jp2, BigInteger n2, BigInteger N, BigInteger A, BigInteger P) {
+        if (n1.signum() < 0 || n1.compareTo(N) >= 0) {
+            n1 = n1.mod(N);
         }
-        return null;
+        if (n2.signum() < 0 || n2.compareTo(N) >= 0) {
+            n2 = n2.mod(N);
+        }
+
+        if (n1.signum() == 0 && n2.signum() == 0) {
+            return new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        }
+
+        Point jp1p2 = jacobianAdd(jp1, jp2, A, P);
+        Point negJp2 = negate(jp2, P);
+        Point jp1mp2 = jacobianAdd(jp1, negJp2, A, P);
+        Point negJp1 = negate(jp1, P);
+        Point negJp1p2 = negate(jp1p2, P);
+        Point negJp1mp2 = negate(jp1mp2, P);
+
+        // addTable[(u0, u1)]: index by (u0+1)*3 + (u1+1), with (0,0) unused.
+        // (1,0) -> jp1; (-1,0) -> -jp1; (0,1) -> jp2; (0,-1) -> -jp2;
+        // (1,1) -> jp1+jp2; (-1,-1) -> -(jp1+jp2); (1,-1) -> jp1-jp2; (-1,1) -> -(jp1-jp2).
+        Point[] addTable = new Point[9];
+        addTable[(1 + 1) * 3 + (0 + 1)] = jp1;
+        addTable[(-1 + 1) * 3 + (0 + 1)] = negJp1;
+        addTable[(0 + 1) * 3 + (1 + 1)] = jp2;
+        addTable[(0 + 1) * 3 + (-1 + 1)] = negJp2;
+        addTable[(1 + 1) * 3 + (1 + 1)] = jp1p2;
+        addTable[(-1 + 1) * 3 + (-1 + 1)] = negJp1p2;
+        addTable[(1 + 1) * 3 + (-1 + 1)] = jp1mp2;
+        addTable[(-1 + 1) * 3 + (1 + 1)] = negJp1mp2;
+
+        int[][] digits = jsfDigits(n1, n2);
+        Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        for (int[] pair : digits) {
+            int u0 = pair[0], u1 = pair[1];
+            r = jacobianDouble(r, A, P);
+            if (u0 != 0 || u1 != 0) {
+                r = jacobianAdd(r, addTable[(u0 + 1) * 3 + (u1 + 1)], A, P);
+            }
+        }
+
+        return r;
+    }
+
+    /**
+     * Negate a point in Jacobian coordinates: (x, y, z) -> (x, -y, z).
+     */
+    private static Point negate(Point p, BigInteger P) {
+        if (p.y.signum() == 0) {
+            return new Point(p.x, BigInteger.ZERO, p.z);
+        }
+        return new Point(p.x, P.subtract(p.y), p.z);
+    }
+
+    /**
+     * Compute n1*p1 + n2*p2 using the GLV endomorphism. Splits each 256-bit
+     * scalar into two ~128-bit scalars via k = k1 + k2*lambda (mod N), then
+     * runs a 4-scalar simultaneous double-and-add over (p1, phi(p1), p2, phi(p2))
+     * with a 16-entry precomputed table of subset sums. Halves the loop
+     * length versus the plain Shamir path.
+     */
+    static Point glvMultiplyAndAdd(Point p1, BigInteger n1, Point p2, BigInteger n2, Curve curve) {
+        Curve.GLVParams glv = curve.glvParams;
+        BigInteger N = curve.N, A = curve.A, P = curve.P;
+        BigInteger beta = glv.beta;
+
+        BigInteger[] d1 = glvDecompose(n1.mod(N), glv, N);
+        BigInteger[] d2 = glvDecompose(n2.mod(N), glv, N);
+        BigInteger k1 = d1[0], k2 = d1[1], k3 = d2[0], k4 = d2[1];
+
+        // Base points (affine, z=1) -- phi((x, y)) = (beta*x mod P, y).
+        Point[] bases = new Point[]{
+            new Point(p1.x, p1.y, BigInteger.ONE),
+            new Point(beta.multiply(p1.x).mod(P), p1.y, BigInteger.ONE),
+            new Point(p2.x, p2.y, BigInteger.ONE),
+            new Point(beta.multiply(p2.x).mod(P), p2.y, BigInteger.ONE),
+        };
+        BigInteger[] scalars = new BigInteger[]{k1, k2, k3, k4};
+        for (int i = 0; i < 4; i++) {
+            if (scalars[i].signum() < 0) {
+                scalars[i] = scalars[i].negate();
+                bases[i] = new Point(bases[i].x, P.subtract(bases[i].y), BigInteger.ONE);
+            }
+        }
+
+        // Precompute table[idx] = sum of bases[i] selected by bits of idx.
+        Point[] table = new Point[16];
+        table[0] = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        for (int idx = 1; idx < 16; idx++) {
+            int low = idx & -idx;
+            int i = Integer.numberOfTrailingZeros(low);
+            table[idx] = jacobianAdd(table[idx ^ low], bases[i], A, P);
+        }
+
+        int maxLen = 0;
+        for (BigInteger s : scalars) {
+            if (s.bitLength() > maxLen) {
+                maxLen = s.bitLength();
+            }
+        }
+        Point r = new Point(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ONE);
+        BigInteger s0 = scalars[0], s1 = scalars[1], s2 = scalars[2], s3 = scalars[3];
+        for (int bit = maxLen - 1; bit >= 0; bit--) {
+            r = jacobianDouble(r, A, P);
+            int idx = (s0.testBit(bit) ? 1 : 0)
+                    | (s1.testBit(bit) ? 2 : 0)
+                    | (s2.testBit(bit) ? 4 : 0)
+                    | (s3.testBit(bit) ? 8 : 0);
+            if (idx != 0) {
+                r = jacobianAdd(r, table[idx], A, P);
+            }
+        }
+
+        return fromJacobian(r, P);
+    }
+
+    /**
+     * Decompose k into (k1, k2) with k = k1 + k2*lambda (mod N) and
+     * |k1|, |k2| ~ sqrt(N). Babai rounding against the precomputed basis
+     * {(a1, b1), (a2, b2)}; k1 and k2 may be negative.
+     */
+    static BigInteger[] glvDecompose(BigInteger k, Curve.GLVParams glv, BigInteger N) {
+        BigInteger a1 = glv.a1, b1 = glv.b1, a2 = glv.a2, b2 = glv.b2;
+        BigInteger halfN = N.shiftRight(1);
+        BigInteger c1 = b2.multiply(k).add(halfN).divide(N);
+        BigInteger c2 = b1.negate().multiply(k).add(halfN).divide(N);
+        BigInteger k1 = k.subtract(c1.multiply(a1)).subtract(c2.multiply(a2));
+        BigInteger k2 = c1.negate().multiply(b1).subtract(c2.multiply(b2));
+        return new BigInteger[]{k1, k2};
+    }
+
+    /**
+     * Joint Sparse Form of (k0, k1): list of signed-digit pairs (u0, u1) in
+     * {-1, 0, 1}, ordered MSB-first. At most one of any two consecutive pairs
+     * is non-zero, giving density ~1/2 instead of ~3/4 from raw binary.
+     */
+    static int[][] jsfDigits(BigInteger k0, BigInteger k1) {
+        java.util.List<int[]> digits = new java.util.ArrayList<>();
+        int d0 = 0;
+        int d1 = 0;
+        while (k0.signum() != 0 || d0 != 0 || k1.signum() != 0 || d1 != 0) {
+            int low0 = (k0.testBit(0) ? 1 : 0) | (k0.testBit(1) ? 2 : 0) | (k0.testBit(2) ? 4 : 0);
+            int low1 = (k1.testBit(0) ? 1 : 0) | (k1.testBit(1) ? 2 : 0) | (k1.testBit(2) ? 4 : 0);
+            int a0 = (low0 + d0) & 7;
+            int a1 = (low1 + d1) & 7;
+            int u0;
+            if ((a0 & 1) != 0) {
+                u0 = ((a0 & 3) == 1) ? 1 : -1;
+                if (((a0 & 7) == 3 || (a0 & 7) == 5) && (a1 & 3) == 2) {
+                    u0 = -u0;
+                }
+            } else {
+                u0 = 0;
+            }
+            int u1;
+            if ((a1 & 1) != 0) {
+                u1 = ((a1 & 3) == 1) ? 1 : -1;
+                if (((a1 & 7) == 3 || (a1 & 7) == 5) && (a0 & 3) == 2) {
+                    u1 = -u1;
+                }
+            } else {
+                u1 = 0;
+            }
+            digits.add(new int[]{u0, u1});
+            if (2 * d0 == 1 + u0) {
+                d0 = 1 - d0;
+            }
+            if (2 * d1 == 1 + u1) {
+                d1 = 1 - d1;
+            }
+            k0 = k0.shiftRight(1);
+            k1 = k1.shiftRight(1);
+        }
+        // Reverse in place (MSB-first).
+        java.util.Collections.reverse(digits);
+        return digits.toArray(new int[0][]);
     }
 }

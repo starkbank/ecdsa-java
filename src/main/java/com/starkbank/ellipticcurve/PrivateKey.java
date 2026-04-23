@@ -4,7 +4,6 @@ import com.starkbank.ellipticcurve.utils.Der;
 import com.starkbank.ellipticcurve.utils.BinaryAscii;
 import com.starkbank.ellipticcurve.utils.RandomInteger;
 import java.math.BigInteger;
-import java.util.Arrays;
 
 
 public class PrivateKey {
@@ -13,25 +12,24 @@ public class PrivateKey {
     public BigInteger secret;
 
     /**
-     *
+     * Generate a new random private key on secp256k1
      */
     public PrivateKey() {
         this(Curve.secp256k1, null);
-        secret = RandomInteger.between(BigInteger.ONE, curve.N);
     }
 
     /**
+     * Create a private key on a specified curve. If secret is null, a random one is generated.
      *
      * @param curve curve
      * @param secret secret
      */
     public PrivateKey(Curve curve, BigInteger secret) {
         this.curve = curve;
-        this.secret = secret;
+        this.secret = secret != null ? secret : RandomInteger.between(BigInteger.ONE, curve.N.subtract(BigInteger.ONE));
     }
 
     /**
-     *
      * @return PublicKey
      */
     public PublicKey publicKey() {
@@ -41,7 +39,19 @@ public class PrivateKey {
     }
 
     /**
+     * Get the hex string representation of the private key secret
      *
+     * @return hex string
+     */
+    public String toString() {
+        String hex = this.secret.toString(16);
+        if (hex.length() % 2 != 0) {
+            hex = "0" + hex;
+        }
+        return hex;
+    }
+
+    /**
      * @return ByteString
      */
     public ByteString toByteString() {
@@ -49,7 +59,6 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @return ByteString
      */
     public ByteString toDer() {
@@ -62,16 +71,13 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @return String
      */
     public String toPem() {
         return Der.toPem(this.toDer(), "EC PRIVATE KEY");
     }
 
-
     /**
-     *
      * @param string string
      * @return PrivateKey
      */
@@ -81,16 +87,14 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @param string string
-     * @return Privatekey
+     * @return PrivateKey
      */
     public static PrivateKey fromDer(String string) {
         return fromDer(new ByteString(string.getBytes()));
     }
 
     /**
-     *
      * @param string ByteString
      * @return PrivateKey
      */
@@ -126,17 +130,11 @@ public class PrivateKey {
         if (!"".equals(empty.toString())) {
             throw new RuntimeException(String.format("trailing junk after DER privkey curve_oid: %s", BinaryAscii.hexFromBinary(empty)));
         }
-        Curve curve = (Curve) Curve.curvesByOid.get(Arrays.hashCode(oidCurve));
-        if (curve == null) {
-            throw new RuntimeException(String.format("Unknown curve with oid %s. I only know about these: %s", Arrays.toString(oidCurve), Arrays.toString(Curve.supportedCurves.toArray())));
-        }
+        Curve curve = Curve.getByOid(oidCurve);
 
         if (privkeyStr.length() < curve.length()) {
             int l = curve.length() - privkeyStr.length();
             byte[] bytes = new byte[l + privkeyStr.length()];
-            for (int i = 0; i < curve.length() - privkeyStr.length(); i++) {
-                bytes[i] = 0;
-            }
             byte[] privateKey = privkeyStr.getBytes();
             System.arraycopy(privateKey, 0, bytes, l, bytes.length - l);
             privkeyStr = new ByteString(bytes);
@@ -146,7 +144,6 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @param string byteString
      * @param curve curve
      * @return PrivateKey
@@ -156,7 +153,6 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @param string string
      * @return PrivateKey
      */
@@ -165,11 +161,21 @@ public class PrivateKey {
     }
 
     /**
-     *
      * @param string byteString
      * @return PrivateKey
      */
     public static PrivateKey fromString(ByteString string) {
         return PrivateKey.fromString(string, Curve.secp256k1);
+    }
+
+    /**
+     * Create a PrivateKey from a hex string and curve
+     *
+     * @param hexString hex string representation of the secret
+     * @param curve the curve
+     * @return PrivateKey
+     */
+    public static PrivateKey fromString(String hexString, Curve curve) {
+        return new PrivateKey(curve, new BigInteger(hexString, 16));
     }
 }

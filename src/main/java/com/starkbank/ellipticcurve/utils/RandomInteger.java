@@ -14,7 +14,7 @@ public class RandomInteger {
     private static final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * Return integer x in the range: start <= x <= end
+     * Return integer x in the range: {@code start <= x <= end}
      *
      * @param start minimum value of the integer
      * @param end maximum value of the integer

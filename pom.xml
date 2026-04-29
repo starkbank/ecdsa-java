@@ -3,7 +3,34 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.starkbank.ellipticcurve</groupId>
   <artifactId>ecdsa-java</artifactId>
-  <version>1.1.0</version>
+  <version>2.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>ecdsa-java</name>
+  <description>A lightweight and fast pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). Compatible with Java 8+ and OpenSSL, it uses elegant math such as Jacobian Coordinates to speed up the ECDSA on pure Java.</description>
+  <url>https://github.com/starkbank/ecdsa-java</url>
+
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://github.com/starkbank/ecdsa-java/blob/master/LICENSE</url>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>starkbank</id>
+      <name>Stark Bank</name>
+      <email>developers@starkbank.com</email>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:git://github.com/starkbank/ecdsa-java.git</connection>
+    <developerConnection>scm:git:ssh://github.com/starkbank/ecdsa-java.git</developerConnection>
+    <url>https://github.com/starkbank/ecdsa-java</url>
+  </scm>
+
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>

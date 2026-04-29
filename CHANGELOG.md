@@ -14,7 +14,7 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 ## [Unreleased]
 ### Fixed
-- Maven compiler version diverging from build.gradle in pom.xml
+- Package setup
 
 ## [1.1.0] - 2026-04-23
 ### Fixed

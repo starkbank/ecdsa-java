@@ -19,19 +19,9 @@
 
   <developers>
     <developer>
-      <id>cdottori-stark</id>
-      <name>Caio Dottori</name>
-      <email>caio.dottori@starkbank.com</email>
-    </developer>
-    <developer>
-      <id>joaogpw-stark</id>
-      <name>Joao Wiederkehr</name>
-      <email>joao.wiederkehr@starkbank.com</email>
-    </developer>
-    <developer>
-      <id>massaru-stark</id>
-      <name>Felipe Sueto</name>
-      <email>felipe.sueto@starkbank.com</email>
+      <id>starkbank</id>
+      <name>Stark Bank</name>
+      <email>developers@starkbank.com</email>
     </developer>
   </developers>
 

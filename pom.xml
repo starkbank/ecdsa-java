@@ -2,11 +2,11 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.starkbank.ellipticcurve</groupId>
-  <artifactId>ecdsa-java</artifactId>
+  <artifactId>starkbank-ecdsa</artifactId>
   <version>2.0.0</version>
   <packaging>jar</packaging>
 
-  <name>ecdsa-java</name>
+  <name>starkbank-ecdsa</name>
   <description>A lightweight and fast pure Java implementation of the Elliptic Curve Digital Signature Algorithm (ECDSA). Compatible with Java 8+ and OpenSSL, it uses elegant math such as Jacobian Coordinates to speed up the ECDSA on pure Java.</description>
   <url>https://github.com/starkbank/ecdsa-java</url>
 

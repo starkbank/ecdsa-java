@@ -13,11 +13,10 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-04-30
 ### Fixed
 - Package setup
-
-## [1.1.0] - 2026-04-23
-### Fixed
 - groupId in pom.xml
 ### Changed
 - Security changes

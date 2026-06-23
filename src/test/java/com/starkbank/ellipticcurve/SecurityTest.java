@@ -422,7 +422,7 @@ public class SecurityTest {
             BigInteger P = BigInteger.valueOf(17);
             for (int value = 1; value < 17; value++) {
                 BigInteger val = BigInteger.valueOf(value);
-                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.TWO);
+                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.valueOf(2));
                 if (val.modPow(halfP, P).equals(BigInteger.ONE)) {
                     BigInteger root = Math.modularSquareRoot(val, P);
                     assertEquals(val, root.multiply(root).mod(P));
@@ -436,7 +436,7 @@ public class SecurityTest {
             BigInteger P = BigInteger.valueOf(13);
             for (int value = 1; value < 13; value++) {
                 BigInteger val = BigInteger.valueOf(value);
-                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.TWO);
+                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.valueOf(2));
                 if (val.modPow(halfP, P).equals(BigInteger.ONE)) {
                     BigInteger root = Math.modularSquareRoot(val, P);
                     assertEquals(val, root.multiply(root).mod(P));
@@ -450,7 +450,7 @@ public class SecurityTest {
             BigInteger P = BigInteger.valueOf(7);
             for (int value = 1; value < 7; value++) {
                 BigInteger val = BigInteger.valueOf(value);
-                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.TWO);
+                BigInteger halfP = P.subtract(BigInteger.ONE).divide(BigInteger.valueOf(2));
                 if (val.modPow(halfP, P).equals(BigInteger.ONE)) {
                     BigInteger root = Math.modularSquareRoot(val, P);
                     assertEquals(val, root.multiply(root).mod(P));

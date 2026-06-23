@@ -120,7 +120,7 @@ public class Curve {
             return false;
         }
         // y^2 - (x^3 + A*x + B) mod P == 0
-        BigInteger lhs = p.y.modPow(BigInteger.TWO, this.P);
+        BigInteger lhs = p.y.modPow(BigInteger.valueOf(2), this.P);
         BigInteger rhs = p.x.modPow(BigInteger.valueOf(3), this.P)
                 .add(this.A.multiply(p.x))
                 .add(this.B)
@@ -148,7 +148,7 @@ public class Curve {
                 .add(this.B)
                 .mod(this.P);
         BigInteger y = Math.modularSquareRoot(ySquared, this.P);
-        if (isEven != y.mod(BigInteger.TWO).equals(BigInteger.ZERO)) {
+        if (isEven != y.mod(BigInteger.valueOf(2)).equals(BigInteger.ZERO)) {
             y = this.P.subtract(y);
         }
         return y;

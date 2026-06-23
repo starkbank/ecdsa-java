@@ -70,7 +70,7 @@ public class PublicKey {
      */
     public String toCompressed() {
         int baseLength = 2 * curve.length();
-        String parityTag = point.y.mod(BigInteger.TWO).equals(BigInteger.ZERO) ? EVEN_TAG : ODD_TAG;
+        String parityTag = point.y.mod(BigInteger.valueOf(2)).equals(BigInteger.ZERO) ? EVEN_TAG : ODD_TAG;
         String xHex = leftPad(point.x.toString(16), baseLength);
         return parityTag + xHex;
     }
